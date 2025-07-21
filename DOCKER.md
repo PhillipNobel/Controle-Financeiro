@@ -14,11 +14,24 @@ Este guia explica como configurar e usar o ambiente Docker para o sistema de Con
 
 ```bash
 # Clone o repositório
-git clone <repository-url>
-cd controle-financeiro
+git clone https://github.com/PhillipNobel/Controle-Financeiro.git
+cd Controle-Financeiro
 
 # Execute o script de inicialização
 ./scripts/docker-init.sh
+```
+
+### Troubleshooting de Build
+
+Se houver problemas na compilação (especialmente com Redis), o script tentará automaticamente usar uma versão simplificada:
+
+```bash
+# Versão simplificada (sem Redis)
+docker-compose -f docker-compose.simple.yml up -d
+
+# Ou forçar uso do Dockerfile simplificado
+cp Dockerfile.simple Dockerfile
+docker-compose build --no-cache
 ```
 
 O script de inicialização irá:
@@ -235,11 +248,29 @@ docker-compose up -d mysql
 #### Cache/Session não funciona
 
 ```bash
-# Verificar Redis
+# Verificar Redis (se disponível)
 docker-compose exec redis redis-cli -a secret ping
 
 # Limpar cache
 docker-compose exec app php artisan cache:clear
+
+# Se Redis não estiver disponível, use cache de arquivo
+# Edite .env e configure:
+# CACHE_DRIVER=file
+# SESSION_DRIVER=file
+# QUEUE_CONNECTION=database
+```
+
+#### Problemas de Compilação do Redis
+
+```bash
+# Se a compilação do Redis falhar, use a versão simplificada
+docker-compose -f docker-compose.simple.yml down
+docker-compose -f docker-compose.simple.yml up -d
+
+# Ou substitua o Dockerfile
+cp Dockerfile.simple Dockerfile
+docker-compose build --no-cache
 ```
 
 ### Logs e Debugging

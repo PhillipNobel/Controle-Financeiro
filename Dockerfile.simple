@@ -1,7 +1,7 @@
-# Multi-stage build for production optimization
+# Dockerfile simplificado para evitar problemas de compilação
 FROM php:8.2-fpm-alpine AS base
 
-# Install system dependencies
+# Install system dependencies including build tools
 RUN apk add --no-cache \
     git \
     curl \
@@ -18,11 +18,12 @@ RUN apk add --no-cache \
     autoconf \
     gcc \
     g++ \
-    make
+    make \
+    linux-headers
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install \
+    && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
         mbstring \
         exif \
@@ -33,9 +34,10 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         intl \
         opcache
 
-# Install Redis extension using pre-built package
-RUN apk add --no-cache php82-redis \
-    && echo "extension=redis.so" > /usr/local/etc/php/conf.d/redis.ini
+# Install Redis extension with error handling
+RUN pecl install redis \
+    && docker-php-ext-enable redis \
+    || echo "Redis extension installation failed, continuing without it"
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -43,13 +45,13 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy composer files
+# Copy composer files first for better caching
 COPY composer.json composer.lock ./
 
 # Development stage
 FROM base AS development
 
-# Install development dependencies
+# Install all dependencies
 RUN composer install --no-scripts --no-autoloader
 
 # Copy application code

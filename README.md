@@ -27,14 +27,27 @@ Sistema completo de controle financeiro pessoal desenvolvido em Laravel com Fila
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/seu-usuario/controle-financeiro.git
-cd controle-financeiro
+git clone https://github.com/PhillipNobel/Controle-Financeiro.git
+cd Controle-Financeiro
 
 # 2. Execute o script de inicialização
 ./scripts/docker-init.sh
 
 # 3. Acesse a aplicação
 # http://localhost:8080
+```
+
+### Solução de Problemas
+
+Se houver problemas na compilação do Redis, o script automaticamente tentará usar uma versão simplificada:
+
+```bash
+# Se o build falhar, tente manualmente:
+docker-compose -f docker-compose.simple.yml up -d
+
+# Ou use o Dockerfile simplificado:
+cp Dockerfile.simple Dockerfile
+docker-compose build --no-cache
 ```
 
 ### Usuários Padrão

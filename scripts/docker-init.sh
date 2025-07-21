@@ -106,14 +106,32 @@ main() {
     
     # Build and start containers
     echo "🏗️  Building Docker containers..."
-    docker-compose build --no-cache
+    
+    # Try building with Redis first
+    if docker-compose build --no-cache; then
+        echo "✅ Build successful with Redis support"
+        COMPOSE_FILE="docker-compose.yml"
+        USE_REDIS=true
+    else
+        echo "⚠️  Build failed with Redis, trying simplified version..."
+        if docker-compose -f docker-compose.simple.yml build --no-cache; then
+            echo "✅ Build successful with simplified version (no Redis)"
+            COMPOSE_FILE="docker-compose.simple.yml"
+            USE_REDIS=false
+        else
+            echo "❌ Both builds failed. Please check Docker installation and logs."
+            exit 1
+        fi
+    fi
     
     echo "🚀 Starting Docker containers..."
-    docker-compose up -d
+    docker-compose -f $COMPOSE_FILE up -d
     
     # Wait for services
     wait_for_service mysql
-    wait_for_service redis
+    if [ "$USE_REDIS" = true ]; then
+        wait_for_service redis
+    fi
     wait_for_service app
     
     # Setup Laravel
