@@ -44,14 +44,10 @@ setup_laravel() {
         sed -i 's/# DB_DATABASE=laravel/DB_DATABASE=controle_financeiro/' .env
         sed -i 's/# DB_USERNAME=root/DB_USERNAME=root/' .env
         sed -i 's/# DB_PASSWORD=/DB_PASSWORD=secret/' .env
-        
-        # Update Redis configuration
-        sed -i 's/REDIS_HOST=127.0.0.1/REDIS_HOST=redis/' .env
-        sed -i 's/REDIS_PASSWORD=null/REDIS_PASSWORD=secret/' .env
-        sed -i 's/CACHE_STORE=database/CACHE_STORE=redis/' .env
-        sed -i 's/SESSION_DRIVER=database/SESSION_DRIVER=redis/' .env
-        sed -i 's/QUEUE_CONNECTION=database/QUEUE_CONNECTION=redis/' .env
     fi
+    
+    # Update Redis/Cache configuration based on user choice
+    update_env_for_redis $USE_REDIS
     
     # Generate application key
     echo "🔑 Generating application key..."
@@ -91,6 +87,56 @@ setup_laravel() {
     docker-compose exec -T app chmod -R 775 /var/www/html/bootstrap/cache
 }
 
+# Function to prompt user for Redis choice
+prompt_redis_choice() {
+    echo ""
+    echo "🔴 Redis Configuration"
+    echo "Redis provides caching, session storage, and queue management for better performance."
+    echo ""
+    echo "Choose your setup:"
+    echo "1) Full setup with Redis (recommended for production)"
+    echo "2) Simple setup without Redis (lighter, good for development)"
+    echo ""
+    
+    while true; do
+        read -p "Enter your choice (1 or 2): " choice
+        case $choice in
+            1)
+                echo "✅ Selected: Full setup with Redis"
+                return 0
+                ;;
+            2)
+                echo "✅ Selected: Simple setup without Redis"
+                return 1
+                ;;
+            *)
+                echo "❌ Invalid choice. Please enter 1 or 2."
+                ;;
+        esac
+    done
+}
+
+# Function to update .env for Redis configuration
+update_env_for_redis() {
+    local use_redis=$1
+    
+    if [ "$use_redis" = true ]; then
+        # Configure for Redis
+        sed -i 's/REDIS_HOST=127.0.0.1/REDIS_HOST=redis/' .env
+        sed -i 's/REDIS_PASSWORD=null/REDIS_PASSWORD=secret/' .env
+        sed -i 's/CACHE_STORE=database/CACHE_STORE=redis/' .env
+        sed -i 's/SESSION_DRIVER=database/SESSION_DRIVER=redis/' .env
+        sed -i 's/QUEUE_CONNECTION=database/QUEUE_CONNECTION=redis/' .env
+        echo "🔴 Redis configuration applied to .env"
+    else
+        # Configure for database-based caching
+        sed -i 's/CACHE_STORE=redis/CACHE_STORE=database/' .env
+        sed -i 's/SESSION_DRIVER=redis/SESSION_DRIVER=database/' .env
+        sed -i 's/QUEUE_CONNECTION=redis/QUEUE_CONNECTION=database/' .env
+        echo "💾 Database-based configuration applied to .env"
+    fi
+}
+
 # Main execution
 main() {
     # Check if Docker and Docker Compose are installed
@@ -104,24 +150,23 @@ main() {
         exit 1
     fi
     
-    # Build and start containers
-    echo "🏗️  Building Docker containers..."
-    
-    # Try building with Redis first
-    if docker-compose build --no-cache; then
-        echo "✅ Build successful with Redis support"
-        COMPOSE_FILE="docker-compose.yml"
+    # Prompt user for Redis choice
+    if prompt_redis_choice; then
         USE_REDIS=true
+        COMPOSE_FILE="docker-compose.yml"
+        echo "🏗️  Building Docker containers with Redis support..."
     else
-        echo "⚠️  Build failed with Redis, trying simplified version..."
-        if docker-compose -f docker-compose.simple.yml build --no-cache; then
-            echo "✅ Build successful with simplified version (no Redis)"
-            COMPOSE_FILE="docker-compose.simple.yml"
-            USE_REDIS=false
-        else
-            echo "❌ Both builds failed. Please check Docker installation and logs."
-            exit 1
-        fi
+        USE_REDIS=false
+        COMPOSE_FILE="docker-compose.simple.yml"
+        echo "🏗️  Building Docker containers without Redis..."
+    fi
+    
+    # Build containers
+    if docker-compose -f $COMPOSE_FILE build --no-cache; then
+        echo "✅ Build successful!"
+    else
+        echo "❌ Build failed. Please check Docker installation and logs."
+        exit 1
     fi
     
     echo "🚀 Starting Docker containers..."
@@ -143,13 +188,22 @@ main() {
     echo "📋 Service URLs:"
     echo "   🌐 Application: http://localhost:8080"
     echo "   🗄️  MySQL: localhost:3306"
-    echo "   🔴 Redis: localhost:6379"
+    if [ "$USE_REDIS" = true ]; then
+        echo "   🔴 Redis: localhost:6379"
+    fi
+    echo ""
+    echo "📋 Configuration:"
+    if [ "$USE_REDIS" = true ]; then
+        echo "   ✅ Redis enabled for caching, sessions, and queues"
+    else
+        echo "   💾 Database-based caching, sessions, and queues"
+    fi
     echo ""
     echo "📋 Useful commands:"
-    echo "   docker-compose logs -f          # View logs"
-    echo "   docker-compose exec app bash    # Access app container"
-    echo "   docker-compose down             # Stop containers"
-    echo "   docker-compose up -d            # Start containers"
+    echo "   docker-compose -f $COMPOSE_FILE logs -f          # View logs"
+    echo "   docker-compose -f $COMPOSE_FILE exec app bash    # Access app container"
+    echo "   docker-compose -f $COMPOSE_FILE down             # Stop containers"
+    echo "   docker-compose -f $COMPOSE_FILE up -d            # Start containers"
     echo ""
 }
 

@@ -17,29 +17,45 @@ Este guia explica como configurar e usar o ambiente Docker para o sistema de Con
 git clone https://github.com/PhillipNobel/Controle-Financeiro.git
 cd Controle-Financeiro
 
-# Execute o script de inicialização
+# Execute o script de inicialização interativo
 ./scripts/docker-init.sh
 ```
 
-### Troubleshooting de Build
+### 🔴 Escolha de Configuração Redis
 
-Se houver problemas na compilação (especialmente com Redis), o script tentará automaticamente usar uma versão simplificada:
+O script de inicialização agora pergunta qual configuração você prefere:
+
+**Opção 1: Full setup with Redis (recomendado para produção)**
+- ✅ Cache Redis para melhor performance
+- ✅ Sessões armazenadas no Redis  
+- ✅ Filas processadas via Redis
+- ✅ Ideal para produção e desenvolvimento avançado
+
+**Opção 2: Simple setup without Redis (mais leve)**
+- 💾 Cache baseado em banco de dados
+- 💾 Sessões armazenadas no banco
+- 💾 Filas processadas via banco  
+- 💾 Ideal para desenvolvimento simples ou recursos limitados
+
+### Instalação Manual
+
+Se preferir configurar manualmente:
 
 ```bash
-# Versão simplificada (sem Redis)
-docker-compose -f docker-compose.simple.yml up -d
+# Com Redis (produção)
+docker-compose up -d --build
 
-# Ou forçar uso do Dockerfile simplificado
-cp Dockerfile.simple Dockerfile
-docker-compose build --no-cache
+# Sem Redis (desenvolvimento leve)
+docker-compose -f docker-compose.simple.yml up -d --build
 ```
 
 O script de inicialização irá:
-- Construir as imagens Docker
-- Iniciar todos os containers
-- Configurar o banco de dados
-- Executar as migrations
-- Popular com dados de exemplo
+- 🔴 Perguntar sobre configuração Redis
+- 🏗️ Construir as imagens Docker apropriadas
+- 🚀 Iniciar todos os containers necessários
+- ⚙️ Configurar o ambiente Laravel automaticamente
+- 🗄️ Executar as migrations e seeders
+- 🔒 Configurar permissões adequadas
 
 ### 2. Acessar a Aplicação
 
