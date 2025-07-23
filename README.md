@@ -2,14 +2,21 @@
 
 Sistema completo de controle financeiro pessoal desenvolvido em Laravel com Filament.
 
-## ⚠️ IMPORTANTE: Ambientes de Desenvolvimento
+## ⚠️ IMPORTANTE: Política de Ambientes
 
-Este projeto usa uma abordagem híbrida para ambientes:
+Este projeto segue uma política rigorosa de ambientes:
 
-- **🏠 Desenvolvimento Local**: 100% NATIVO (sem Docker)
-- **🚀 Staging/Produção**: 100% Docker
+### 🚫 NUNCA USE DOCKER PARA DESENVOLVIMENTO LOCAL!
 
-**Docker é PROIBIDO para desenvolvimento local!**
+- **🏠 Desenvolvimento Local**: 100% NATIVO (PHP + MySQL + Composer nativos)
+- **🚀 Staging no VPS**: 100% Docker
+
+### Por que essa separação?
+
+- **Desenvolvimento Nativo**: Máxima velocidade, hot reload instantâneo, debugging nativo
+- **Staging Docker**: Ambiente controlado, isolado e replicável para testes
+
+**⚠️ ATENÇÃO**: Docker é usado APENAS para staging! Desenvolvimento é 100% nativo!
 
 ## ✨ Funcionalidades
 
@@ -63,27 +70,29 @@ php artisan serve
 
 📖 **Guia completo**: [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md)
 
-## 🐳 Staging/Produção (Docker)
+## 🐳 Staging (Docker APENAS)
 
-### Pré-requisitos
+### ⚠️ IMPORTANTE: Docker é APENAS para Staging!
 
-- Docker 20.10+
-- Docker Compose 2.0+
-- Git
-
-### Instalação
+### Staging no VPS
 
 ```bash
-# 1. Clone o repositório
+# 1. Clone o repositório no VPS
 git clone https://github.com/PhillipNobel/Controle-Financeiro.git
 cd Controle-Financeiro
 
-# 2. Execute o script de inicialização
-./scripts/docker-init.sh
+# 2. Configure ambiente de staging
+cp .env.staging .env
+# Edite as variáveis necessárias
 
-# 3. Acesse a aplicação
-# http://localhost:8080
+# 3. Execute deploy para staging
+./scripts/deploy-staging.sh
+
+# 4. Configure SSL
+./scripts/setup-ssl-staging.sh
 ```
+
+📖 **Guia completo**: [STAGING_DOCKER_SETUP.md](STAGING_DOCKER_SETUP.md)
 
 ### Solução de Problemas
 
@@ -133,32 +142,15 @@ docker-compose logs -f
 ├── docker/                 # Configurações Docker
 ├── scripts/                # Scripts utilitários
 ├── docker-compose.yml      # Ambiente de desenvolvimento
-├── docker-compose.prod.yml # Ambiente de produção
+
 ├── Dockerfile             # Imagem da aplicação
 └── DOCKER.md              # Documentação Docker detalhada
 ```
 
-## 🚀 Deploy em Produção
-
-### Deploy Automático
-
-```bash
-# Configure o ambiente de produção
-cp .env.production .env.prod
-# Edite .env.prod com suas configurações
-
-# Execute o deploy
-./scripts/deploy-production.sh
-```
-
-### Deploy Manual
-
-Consulte o arquivo [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) para instruções detalhadas.
-
-## 📚 Documentação
+## � Docume ntação
 
 - [📖 Guia Docker](DOCKER.md) - Configuração e uso do Docker
-- [🚀 Deploy em Produção](PRODUCTION_DEPLOYMENT.md) - Guia de deploy
+- [🚀 Deploy para Staging](STAGING_DOCKER_SETUP.md) - Guia de deploy
 - [🔧 Especificações](/.kiro/specs/controle-financeiro-simples/) - Documentação técnica
 
 ## 🧪 Testes

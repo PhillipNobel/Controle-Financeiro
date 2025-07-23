@@ -2,36 +2,36 @@
 
 ## Overview
 
-Este documento descreve o design da arquitetura de ambientes para o sistema de Controle Financeiro, estabelecendo uma estrutura clara e escalável para desenvolvimento local, staging no VPS e preparação para produção futura.
+Este documento descreve o design da arquitetura de ambientes para o sistema de Controle Financeiro, estabelecendo uma estrutura clara para desenvolvimento local nativo e staging no VPS usando Docker.
 
 ## Architecture
 
 ### Environment Structure
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   DEVELOPMENT   │    │     STAGING     │    │   PRODUCTION    │
-│  (Local Native) │───▶│  (VPS Docker)   │───▶│ (Docker Cloud)  │
-│   NO DOCKER!    │    │  DOCKER ONLY!   │    │  DOCKER ONLY!   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-│                      │                      │
-│ • PHP 8.3+ Native    │ • PHP Docker         │ • PHP Docker
-│ • MySQL Native       │ • MySQL Docker       │ • MySQL Docker
-│ • File Cache         │ • Redis Docker       │ • Redis Docker
-│ • Local Files        │ • Docker Volumes     │ • Persistent Storage
-│ • Debug ON           │ • Debug Limited      │ • Debug OFF
-│ • Hot Reload         │ • Production Build   │ • Optimized Build
-│ • Artisan Serve      │ • Nginx + PHP-FPM    │ • Load Balanced
-│ • MAMP/XAMPP/Herd    │ • Containerized      │ • Containerized
-│ • Composer Local     │ • Docker Compose     │ • Orchestrated
-│ • SQLite Tests       │ • MySQL Tests        │ • MySQL Optimized
-│ • Xdebug Native      │ • Logs Estruturados  │ • Monitoring
-│ • MailHog Native     │ • SSL/HTTPS          │ • Security
-│ • Zero Containers    │ • Health Checks      │ • Auto Scaling
-└──────────────────────┴──────────────────────┴─────────────────────
+┌─────────────────┐    ┌─────────────────┐
+│   DEVELOPMENT   │    │     STAGING     │
+│  (Local Native) │───▶│  (VPS Docker)   │
+│   NO DOCKER!    │    │  DOCKER ONLY!   │
+└─────────────────┘    └─────────────────┘
+│                      │
+│ • PHP 8.3+ Native    │ • PHP Docker
+│ • MySQL Native       │ • MySQL Docker
+│ • File Cache         │ • Redis Docker
+│ • Local Files        │ • Docker Volumes
+│ • Debug ON           │ • Debug Limited
+│ • Hot Reload         │ • Optimized Build
+│ • Artisan Serve      │ • Nginx + PHP-FPM
+│ • MAMP/XAMPP/Herd    │ • Containerized
+│ • Composer Local     │ • Docker Compose
+│ • SQLite Tests       │ • MySQL Tests
+│ • Xdebug Native      │ • Logs Estruturados
+│ • MailHog Native     │ • SSL/HTTPS
+│ • Zero Containers    │ • Health Checks
+└──────────────────────┴──────────────────────
 
 IMPORTANTE: Docker é PROIBIDO para desenvolvimento local!
-Desenvolvimento = 100% nativo, Staging/Produção = 100% Docker
+Desenvolvimento = 100% nativo, Staging = 100% Docker
 ```
 
 ### Configuration Management
@@ -41,15 +41,12 @@ graph TD
     A[Environment Detection] --> B{Environment Type}
     B -->|local| C[Development Config]
     B -->|staging| D[Staging Config]
-    B -->|production| E[Production Config]
     
-    C --> F[SQLite + File Cache]
-    D --> G[MySQL + Redis]
-    E --> H[MySQL + Redis + Optimizations]
+    C --> F[MySQL Native + File Cache]
+    D --> G[MySQL Docker + Redis Docker]
     
     F --> I[Local Development]
     G --> J[VPS Staging]
-    H --> K[Production Server]
 ```
 
 ## Components and Interfaces
@@ -134,7 +131,7 @@ interface EnvironmentConfigInterface
 ]
 ```
 
-**Staging/Production**:
+**Staging**:
 ```php
 'cache' => [
     'default' => 'redis',
@@ -153,7 +150,7 @@ interface EnvironmentConfigInterface
 
 ### 4. Docker Configuration Manager
 
-**Purpose**: Provide Docker setups for staging and production environments only
+**Purpose**: Provide Docker setup for staging environment only
 
 **Local Development** (100% NATIVO - ZERO Docker):
 - Native PHP 8.3+ via `php artisan serve` (porta 8000) ou Laravel Herd
@@ -173,17 +170,13 @@ interface EnvironmentConfigInterface
 - Limpeza de todas as referências Docker em documentação de desenvolvimento
 
 **Staging Docker**:
-- Production-like MySQL setup
+- Optimized MySQL setup
 - Redis for caching and sessions
 - Nginx with SSL termination
 - Health checks and monitoring
 - Backup volumes
 
-**Production Docker** (Future):
-- Optimized MySQL configuration
-- Redis cluster for high availability
-- Load balancer configuration
-- Advanced monitoring and logging
+
 
 ## Data Models
 
@@ -203,7 +196,7 @@ class EnvironmentConfig
     
     public function isLocal(): bool;
     public function isStaging(): bool;
-    public function isProduction(): bool;
+
     public function getDockerCompose(): string;
 }
 ```
@@ -229,7 +222,7 @@ class DeploymentConfig
 ## Error Handling
 
 ### Environment Detection Errors
-- Fallback to safe defaults (production-like settings)
+- Fallback to safe defaults (staging-like settings)
 - Log environment detection issues
 - Provide clear error messages for configuration problems
 
@@ -323,12 +316,12 @@ sequenceDiagram
 
 ### Environment Isolation
 - Separate environment variables per environment
-- No production secrets in development
-- Encrypted secrets in staging/production
+- No staging secrets in development
+- Encrypted secrets in staging
 
 ### Database Security
 - Different database users per environment
-- SSL connections in staging/production
+- SSL connections in staging
 - Regular security updates
 
 ### Docker Security
@@ -346,14 +339,10 @@ sequenceDiagram
 - Minimal logging
 
 ### Staging
-- Production-like performance
+- Optimized performance
 - Redis caching
 - Optimized queries
 - Performance monitoring
-
-### Production (Future)
-- Database connection pooling
-- Advanced caching strategies
 - CDN integration
 - Load balancing preparation
 
@@ -398,7 +387,6 @@ docs/
 ├── environments/
 │   ├── local-setup.md
 │   ├── staging-setup.md
-│   ├── production-setup.md
 │   └── troubleshooting.md
 ├── deployment/
 │   ├── staging-deployment.md

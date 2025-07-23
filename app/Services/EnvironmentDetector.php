@@ -10,7 +10,7 @@ class EnvironmentDetector
     public function detectEnvironment(): string
     {
         // First priority: APP_ENV environment variable
-        $appEnv = env('APP_ENV');
+        $appEnv = $this->getAppEnv();
         if ($appEnv) {
             return $this->normalizeEnvironment($appEnv);
         }
@@ -28,6 +28,28 @@ class EnvironmentDetector
         
         // Fallback to production for security (safe default)
         return 'production';
+    }
+
+    /**
+     * Get APP_ENV value, checking both Laravel env() and direct getenv()
+     */
+    protected function getAppEnv(): ?string
+    {
+        // First try direct environment variable (for testing)
+        $directEnv = getenv('APP_ENV');
+        if ($directEnv !== false && $directEnv !== '') {
+            return $directEnv;
+        }
+
+        // Then try Laravel's env() helper if available
+        if (function_exists('env')) {
+            $laravelEnv = env('APP_ENV');
+            if ($laravelEnv && $laravelEnv !== 'testing') {
+                return $laravelEnv;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -52,6 +74,14 @@ class EnvironmentDetector
     public function isProduction(): bool
     {
         return $this->detectEnvironment() === 'production';
+    }
+
+    /**
+     * Check if current environment is testing
+     */
+    public function isTesting(): bool
+    {
+        return $this->detectEnvironment() === 'testing';
     }
 
     /**
@@ -128,6 +158,7 @@ class EnvironmentDetector
             'development' => 'local',
             'stage' => 'staging',
             'prod' => 'production',
+            'testing' => 'testing', // Keep testing as-is for unit tests
         ];
 
         return $mappings[$env] ?? $env;
@@ -144,6 +175,7 @@ class EnvironmentDetector
             'local' => $this->getLocalConfig(),
             'staging' => $this->getStagingConfig(),
             'production' => $this->getProductionConfig(),
+            'testing' => $this->getTestingConfig(),
             default => $this->getProductionConfig(), // Safe fallback
         };
     }
@@ -156,11 +188,17 @@ class EnvironmentDetector
         return [
             'debug' => true,
             'database' => [
-                'default' => 'sqlite',
+                'default' => 'mysql',
                 'connections' => [
+                    'mysql' => [
+                        'driver' => 'mysql',
+                        'host' => '127.0.0.1',
+                        'port' => '3306',
+                        'database' => 'controle_financeiro_local',
+                    ],
                     'sqlite' => [
                         'driver' => 'sqlite',
-                        'database' => database_path('database.sqlite'),
+                        'database' => 'database/database.sqlite',
                     ],
                 ],
             ],
@@ -189,9 +227,9 @@ class EnvironmentDetector
                 'connections' => [
                     'mysql' => [
                         'driver' => 'mysql',
-                        'host' => env('DB_HOST', 'mysql'),
-                        'port' => env('DB_PORT', '3306'),
-                        'database' => env('DB_DATABASE', 'controle_financeiro_staging'),
+                        'host' => $this->getEnvValue('DB_HOST', 'mysql'),
+                        'port' => $this->getEnvValue('DB_PORT', '3306'),
+                        'database' => $this->getEnvValue('DB_DATABASE', 'controle_financeiro_staging'),
                     ],
                 ],
             ],
@@ -220,9 +258,9 @@ class EnvironmentDetector
                 'connections' => [
                     'mysql' => [
                         'driver' => 'mysql',
-                        'host' => env('DB_HOST', 'localhost'),
-                        'port' => env('DB_PORT', '3306'),
-                        'database' => env('DB_DATABASE', 'controle_financeiro'),
+                        'host' => $this->getEnvValue('DB_HOST', 'localhost'),
+                        'port' => $this->getEnvValue('DB_PORT', '3306'),
+                        'database' => $this->getEnvValue('DB_DATABASE', 'controle_financeiro'),
                     ],
                 ],
             ],
@@ -237,5 +275,70 @@ class EnvironmentDetector
                 'channels' => ['daily'],
             ],
         ];
+    }
+
+    /**
+     * Get testing configuration
+     */
+    protected function getTestingConfig(): array
+    {
+        return [
+            'debug' => true,
+            'database' => [
+                'default' => 'sqlite',
+                'connections' => [
+                    'sqlite' => [
+                        'driver' => 'sqlite',
+                        'database' => ':memory:',
+                    ],
+                ],
+            ],
+            'cache' => [
+                'default' => 'array',
+            ],
+            'session' => [
+                'driver' => 'array',
+            ],
+            'logging' => [
+                'level' => 'debug',
+                'channels' => ['single'],
+            ],
+        ];
+    }
+
+    /**
+     * Get database path with fallback for testing
+     */
+    protected function getDatabasePath(string $filename): string
+    {
+        // Try Laravel's database_path helper first
+        if (function_exists('database_path')) {
+            try {
+                return database_path($filename);
+            } catch (\Exception $e) {
+                // Fall through to manual path construction
+            }
+        }
+        
+        // Fallback for testing or when Laravel is not fully booted
+        $basePath = __DIR__ . '/../../database/';
+        return $basePath . $filename;
+    }
+
+    /**
+     * Get environment variable value with fallback for testing
+     */
+    protected function getEnvValue(string $key, string $default = ''): string
+    {
+        if (function_exists('env')) {
+            try {
+                return env($key, $default);
+            } catch (\Exception $e) {
+                // Fall through to getenv
+            }
+        }
+        
+        $value = getenv($key);
+        return $value !== false ? $value : $default;
     }
 }

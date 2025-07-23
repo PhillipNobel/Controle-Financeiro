@@ -13,7 +13,7 @@
   - Garantir que desenvolvimento funciona 100% nativo
   - _Requirements: 1.1, 1.2, 1.3, 1.8, 1.9, 5.1_
 
-- [-] 2. Criar configurações específicas por ambiente
+- [x] 2. Criar configurações específicas por ambiente
 - [x] 2.1 Implementar detecção automática de ambiente
   - Criar classe EnvironmentDetector para identificar ambiente atual
   - Implementar lógica baseada em APP_ENV e hostname
@@ -24,24 +24,24 @@
 - [x] 2.2 Configurar arquivos de ambiente específicos
   - Criar .env.local para desenvolvimento
   - Criar .env.staging para VPS
-  - Criar .env.production.example para produção futura
+
   - Documentar variáveis específicas de cada ambiente
   - _Requirements: 3.2, 3.3, 3.4_
 
 - [x] 2.3 Implementar configuração de banco de dados por ambiente
   - Configurar MySQL para desenvolvimento local
   - Configurar MySQL para staging com Docker
-  - Preparar configuração MySQL otimizada para produção
+
   - Criar migrations compatíveis com todos os ambientes
   - _Requirements: 5.1, 5.2, 5.3, 5.5_
 
-- [ ] 3. Configurar Docker APENAS para staging e produção (NUNCA para desenvolvimento local)
+- [-] 3. Configurar Docker APENAS para staging (NUNCA para desenvolvimento local)
 - [x] 3.1 Remover completamente configurações Docker para desenvolvimento local
   - Remover docker-compose.local.yml (não será usado para desenvolvimento)
   - Remover scripts/docker-dev.sh (não será usado para desenvolvimento)
   - Limpar todas as configurações Docker relacionadas ao desenvolvimento local
-  - Atualizar documentação para deixar claro: desenvolvimento = 100% NATIVO, staging/produção = Docker
-  - Manter apenas Dockerfile para staging/produção
+  - Atualizar documentação para deixar claro: desenvolvimento = 100% NATIVO, staging = Docker
+  - Manter apenas Dockerfile para staging
   - Criar aviso destacado na documentação sobre NUNCA usar Docker localmente
   - Remover configurações de Xdebug do Dockerfile (será usado apenas nativo)
   - Limpar volumes e configurações específicas de desenvolvimento do Docker
@@ -51,19 +51,14 @@
   - Limpar configurações PHP de desenvolvimento do Docker
   - _Requirements: 1.8, 1.9, 1.10, 2.8, 2.9, 2.10_
 
-- [ ] 3.2 Configurar Docker para staging no VPS
+- [x] 3.2 Configurar Docker para staging no VPS
   - Atualizar docker-compose.yml para staging
   - Configurar SSL/HTTPS para staging
   - Implementar health checks robustos
   - Configurar logs estruturados para staging
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 3.3 Preparar configuração Docker para produção
-  - Criar docker-compose.prod.yml para produção futura
-  - Implementar configurações de segurança avançadas
-  - Configurar backup automático de volumes
-  - Preparar configurações de load balancing
-  - _Requirements: 3.4_
+
 
 - [ ] 4. Implementar scripts de deployment
 - [ ] 4.1 Criar script de deploy para staging
@@ -149,7 +144,7 @@
   - Documentar configuração de Xdebug nativo para debugging
   - Criar seção de troubleshooting para problemas comuns de ambiente nativo
   - Adicionar exemplos de comandos úteis para desenvolvimento nativo
-  - Documentar claramente: desenvolvimento = NATIVO, staging/produção = DOCKER
+  - Documentar claramente: desenvolvimento = NATIVO, staging = DOCKER
   - Adicionar aviso destacado sobre NÃO usar Docker para desenvolvimento
   - Explicar vantagens do desenvolvimento nativo (velocidade, simplicidade)
   - _Requirements: 6.1, 6.3_

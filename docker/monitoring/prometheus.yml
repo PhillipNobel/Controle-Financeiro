@@ -1,0 +1,80 @@
+# Prometheus configuration for staging environment monitoring
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'staging'
+    project: 'controle-financeiro'
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter (system metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # cAdvisor (container metrics)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Redis Exporter
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # MySQL Exporter
+  - job_name: 'mysql-exporter'
+    static_configs:
+      - targets: ['mysql-exporter:9104']
+    scrape_interval: 30s
+
+  # Nginx metrics (if nginx-prometheus-exporter is added)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:9113']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Application metrics (if Laravel Prometheus exporter is added)
+  - job_name: 'laravel-app'
+    static_configs:
+      - targets: ['app:9000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Health check endpoints
+  - job_name: 'health-checks'
+    static_configs:
+      - targets: ['nginx:80']
+    scrape_interval: 60s
+    metrics_path: /health
+    scheme: http
+
+# Alerting configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Remote write configuration (optional - for external monitoring services)
+# remote_write:
+#   - url: "https://your-remote-prometheus-endpoint/api/v1/write"
+#     basic_auth:
+#       username: "your-username"
+#       password: "your-password"

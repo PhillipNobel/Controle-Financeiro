@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Este documento define os requisitos para configurar adequadamente os diferentes ambientes do sistema de Controle Financeiro, estabelecendo uma estrutura clara para desenvolvimento local, staging no VPS e preparação para produção futura.
+Este documento define os requisitos para configurar adequadamente os ambientes do sistema de Controle Financeiro, estabelecendo uma estrutura clara para desenvolvimento local nativo e staging no VPS usando Docker.
 
 ## Requirements
 
@@ -20,12 +20,12 @@ Este documento define os requisitos para configurar adequadamente os diferentes 
 6. WHEN o desenvolvedor precisa de ferramentas auxiliares THEN o sistema SHALL usar ferramentas nativas locais (MailHog nativo, Redis local opcional)
 7. WHEN o desenvolvedor faz debugging THEN o sistema SHALL usar Xdebug nativo configurado para IDEs locais
 8. WHEN o desenvolvedor inicia o projeto THEN o sistema SHALL NUNCA usar Docker para desenvolvimento local
-9. WHEN há arquivos Docker no projeto THEN o sistema SHALL garantir que são APENAS para staging/produção, nunca para desenvolvimento local
+9. WHEN há arquivos Docker no projeto THEN o sistema SHALL garantir que são APENAS para staging, nunca para desenvolvimento local
 10. WHEN há docker-compose.local.yml ou scripts Docker para desenvolvimento THEN o sistema SHALL removê-los completamente do projeto
 
 ### Requirement 2
 
-**User Story:** Como desenvolvedor, eu quero configurar facilmente o ambiente de staging no VPS usando Docker exclusivamente, para que eu possa testar a aplicação em um ambiente similar à produção.
+**User Story:** Como desenvolvedor, eu quero configurar facilmente o ambiente de staging no VPS usando Docker exclusivamente, para que eu possa testar a aplicação em um ambiente otimizado e controlado.
 
 #### Acceptance Criteria
 
@@ -34,23 +34,22 @@ Este documento define os requisitos para configurar adequadamente os diferentes 
 3. WHEN o ambiente de staging é configurado THEN o sistema SHALL ter logs detalhados habilitados e estruturados
 4. WHEN o sistema roda em staging THEN o sistema SHALL usar HTTPS com certificado válido (Let's Encrypt ou similar)
 5. IF houver problemas de recursos no VPS THEN o sistema SHALL permitir configuração simplificada sem Redis
-6. WHEN o desenvolvedor faz deploy THEN o sistema SHALL usar Docker apenas para ambientes remotos (staging/produção), NUNCA local
+6. WHEN o desenvolvedor faz deploy THEN o sistema SHALL usar Docker apenas para staging, NUNCA local
 7. WHEN o ambiente de staging é iniciado THEN o sistema SHALL ter health checks robustos para monitoramento
-8. WHEN há configurações Docker THEN o sistema SHALL garantir que são APENAS para staging e produção, NUNCA desenvolvimento
-9. WHEN há docker-compose files THEN o sistema SHALL ter APENAS docker-compose.yml (staging) e docker-compose.prod.yml (produção)
+8. WHEN há configurações Docker THEN o sistema SHALL garantir que são APENAS para staging, NUNCA desenvolvimento
+9. WHEN há docker-compose files THEN o sistema SHALL ter APENAS docker-compose.yml (staging)
 10. WHEN há arquivos docker-compose.local.yml THEN o sistema SHALL removê-los completamente pois desenvolvimento é 100% nativo
 
 ### Requirement 3
 
-**User Story:** Como administrador do sistema, eu quero ter configurações de ambiente bem definidas, para que eu possa facilmente distinguir entre desenvolvimento, staging e produção.
+**User Story:** Como administrador do sistema, eu quero ter configurações de ambiente bem definidas, para que eu possa facilmente distinguir entre desenvolvimento local e staging.
 
 #### Acceptance Criteria
 
 1. WHEN o sistema inicia THEN o sistema SHALL detectar automaticamente o ambiente baseado em variáveis
 2. WHEN está em desenvolvimento THEN o sistema SHALL mostrar debug detalhado e usar configurações otimizadas para velocidade
-3. WHEN está em staging THEN o sistema SHALL usar configurações similares à produção mas com logs verbosos
-4. WHEN está em produção THEN o sistema SHALL usar configurações otimizadas para performance e segurança
-5. IF o ambiente não for detectado THEN o sistema SHALL usar configuração segura por padrão
+3. WHEN está em staging THEN o sistema SHALL usar configurações otimizadas para performance com logs verbosos
+4. IF o ambiente não for detectado THEN o sistema SHALL usar configuração de desenvolvimento por padrão
 
 ### Requirement 4
 
@@ -73,8 +72,7 @@ Este documento define os requisitos para configurar adequadamente os diferentes 
 1. WHEN está em desenvolvimento local THEN o sistema SHALL usar MySQL nativo instalado localmente
 2. WHEN o desenvolvedor executa testes THEN o sistema SHALL usar SQLite em memória para velocidade
 3. WHEN está em staging THEN o sistema SHALL usar MySQL via Docker com configurações de performance
-4. WHEN está em produção THEN o sistema SHALL usar MySQL via Docker com configurações otimizadas e backup automático
-5. IF houver migração entre ambientes THEN o sistema SHALL manter compatibilidade de dados
+4. IF houver migração entre ambientes THEN o sistema SHALL manter compatibilidade de dados
 
 ### Requirement 6
 
