@@ -1,6 +1,15 @@
 # 💰 Controle Financeiro Simples
 
-Sistema completo de controle financeiro pessoal desenvolvido em Laravel com Filament, containerizado com Docker.
+Sistema completo de controle financeiro pessoal desenvolvido em Laravel com Filament.
+
+## ⚠️ IMPORTANTE: Ambientes de Desenvolvimento
+
+Este projeto usa uma abordagem híbrida para ambientes:
+
+- **🏠 Desenvolvimento Local**: 100% NATIVO (sem Docker)
+- **🚀 Staging/Produção**: 100% Docker
+
+**Docker é PROIBIDO para desenvolvimento local!**
 
 ## ✨ Funcionalidades
 
@@ -13,9 +22,48 @@ Sistema completo de controle financeiro pessoal desenvolvido em Laravel com Fila
 - 🔔 **Lembretes** de pagamentos
 - 👥 **Multi-usuário** com controle de acesso
 - 📱 **Interface responsiva** para mobile
-- 🐳 **Containerizado** com Docker
 
-## 🚀 Início Rápido com Docker
+## 🏠 Desenvolvimento Local (NATIVO)
+
+### Pré-requisitos
+
+- PHP 8.3+
+- MySQL (via MAMP/XAMPP/Homebrew/Laravel Herd)
+- Composer
+- Node.js 18+
+
+### Instalação Rápida
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/PhillipNobel/Controle-Financeiro.git
+cd Controle-Financeiro
+
+# 2. Instale dependências
+composer install
+npm install
+
+# 3. Configure ambiente
+cp .env.example .env
+php artisan key:generate
+
+# 4. Configure MySQL nativo no .env
+# DB_CONNECTION=mysql
+# DB_HOST=127.0.0.1
+# DB_PORT=3306
+# DB_DATABASE=controle_financeiro_local
+
+# 5. Execute migrações
+php artisan migrate --seed
+
+# 6. Inicie servidor nativo
+php artisan serve
+# Acesse: http://localhost:8000
+```
+
+📖 **Guia completo**: [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md)
+
+## 🐳 Staging/Produção (Docker)
 
 ### Pré-requisitos
 

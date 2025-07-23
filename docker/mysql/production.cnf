@@ -1,0 +1,125 @@
+# MySQL Configuration for Production Environment
+# Optimized for maximum performance and security
+
+[mysqld]
+# Basic Settings
+default-storage-engine = InnoDB
+default-table-type = InnoDB
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Connection Settings (optimized for production load)
+max_connections = 200
+max_connect_errors = 100000
+wait_timeout = 300
+interactive_timeout = 300
+connect_timeout = 10
+
+# Buffer Pool Settings (adjust based on available RAM - use 70-80% of RAM)
+innodb_buffer_pool_size = 1G
+innodb_buffer_pool_instances = 4
+innodb_buffer_pool_chunk_size = 128M
+
+# Log Settings (optimized for performance)
+innodb_log_file_size = 256M
+innodb_log_buffer_size = 64M
+innodb_flush_log_at_trx_commit = 1
+innodb_log_files_in_group = 2
+
+# Query Cache (disabled in MySQL 8.0+)
+query_cache_type = 0
+query_cache_size = 0
+
+# Temporary Tables
+tmp_table_size = 64M
+max_heap_table_size = 64M
+
+# MyISAM Settings
+key_buffer_size = 32M
+
+# Thread Settings (optimized for concurrent connections)
+thread_cache_size = 16
+thread_stack = 512K
+max_allowed_packet = 64M
+
+# Table Settings
+table_open_cache = 2000
+table_definition_cache = 1000
+open_files_limit = 65535
+
+# Binary Logging (essential for production)
+log-bin = mysql-bin
+binlog_format = ROW
+expire_logs_days = 30
+max_binlog_size = 500M
+sync_binlog = 1
+
+# Error Logging (minimal for production)
+log-error = /var/log/mysql/error.log
+log_error_verbosity = 1
+
+# Slow Query Log (for performance monitoring)
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 1
+log_queries_not_using_indexes = 0
+
+# General Query Log (disabled for performance)
+general_log = 0
+
+# Security Settings (enhanced for production)
+local_infile = 0
+skip_show_database = 1
+secure_file_priv = /var/lib/mysql-files/
+
+# InnoDB Settings (production optimized)
+innodb_file_per_table = 1
+innodb_flush_method = O_DIRECT
+innodb_lock_wait_timeout = 30
+innodb_rollback_on_timeout = 1
+innodb_print_all_deadlocks = 0
+innodb_io_capacity = 200
+innodb_io_capacity_max = 2000
+innodb_read_io_threads = 4
+innodb_write_io_threads = 4
+innodb_purge_threads = 4
+innodb_page_cleaners = 4
+
+# SQL Mode (strict for production data integrity)
+sql_mode = ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+
+# Performance Schema (optimized settings)
+performance_schema = ON
+performance_schema_max_table_instances = 1000
+performance_schema_max_table_handles = 10000
+
+# SSL Settings (required for production)
+ssl-ca = /etc/mysql/ssl/ca-cert.pem
+ssl-cert = /etc/mysql/ssl/server-cert.pem
+ssl-key = /etc/mysql/ssl/server-key.pem
+require_secure_transport = ON
+
+# Replication Settings (if using master-slave setup)
+server-id = 1
+gtid_mode = ON
+enforce_gtid_consistency = ON
+
+[mysql]
+default-character-set = utf8mb4
+
+[client]
+default-character-set = utf8mb4
+port = 3306
+socket = /var/run/mysqld/mysqld.sock
+
+[mysqldump]
+quick
+quote-names
+max_allowed_packet = 64M
+default-character-set = utf8mb4
+single-transaction
+routines
+triggers
+
+[isamchk]
+key_buffer_size = 32M

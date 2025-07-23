@@ -28,19 +28,28 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => [
+                    50 => '#faf5ff',
+                    100 => '#f3e8ff',
+                    200 => '#e9d5ff',
+                    300 => '#d8b4fe',
+                    400 => '#c084fc',
+                    500 => '#a855f7',
+                    600 => '#9333ea',
+                    700 => '#7e22ce',
+                    800 => '#6b21a8',
+                    900 => '#581c87',
+                    950 => '#3b0764',
+                ],
             ])
+            ->sidebarWidth('14rem') // Define a largura da sidebar
+            ->sidebarCollapsibleOnDesktop() // Opcional: permite colapsar a sidebar
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 \App\Filament\Pages\Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
-            ->widgets([
-                \App\Filament\Widgets\FinancialSummaryWidget::class,
-                \App\Filament\Widgets\ExpenseVsRevenueWidget::class,
-                \App\Filament\Widgets\MostExpensiveWidget::class,
-            ])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

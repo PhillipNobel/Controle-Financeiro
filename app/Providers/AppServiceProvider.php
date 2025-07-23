@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\DatabaseConfigurationService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Configure database for current environment
+        $this->configureDatabaseForEnvironment();
+
         // Force HTTPS in production
         if (config('production.security.force_https', false) && $this->app->environment('production')) {
             URL::forceScheme('https');
@@ -39,6 +43,16 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             $this->setupSecurityHeaders();
         }
+    }
+
+    /**
+     * Configure database for current environment
+     */
+    private function configureDatabaseForEnvironment(): void
+    {
+        $databaseService = new DatabaseConfigurationService();
+        $databaseService->configureForEnvironment();
+        $databaseService->optimizeForEnvironment();
     }
 
     /**

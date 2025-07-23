@@ -73,6 +73,8 @@
 /* Sidebar/Navigation */
 .fi-sidebar {
     background-color: var(--gray-900) !important;
+    width: 14rem !important; /* Reduz a largura da sidebar */
+    max-width: 14rem !important; /* Garante que a largura máxima também seja reduzida */
 }
 
 .fi-sidebar-nav-item-active {

@@ -1,9 +1,13 @@
 #!/bin/bash
 
-# Docker initialization script for Laravel application
+# Docker initialization script for STAGING/PRODUCTION environments ONLY
+# 🚫 THIS SCRIPT IS NOT FOR LOCAL DEVELOPMENT! 🚫
+# Local development should be 100% NATIVE (no Docker)
 set -e
 
-echo "🚀 Starting Docker initialization..."
+echo "🚀 Starting Docker initialization for STAGING/PRODUCTION..."
+echo "⚠️  WARNING: This script is for STAGING/PRODUCTION environments only!"
+echo "⚠️  For local development, use native PHP, MySQL, and Composer!"
 
 # Function to wait for service
 wait_for_service() {

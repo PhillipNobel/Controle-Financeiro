@@ -46,16 +46,16 @@ WORKDIR /var/www/html
 # Copy composer files
 COPY composer.json composer.lock ./
 
-# Development stage
-FROM base AS development
+# Staging stage (for VPS staging environment)
+FROM base AS staging
 
-# Install development dependencies
-RUN composer install --no-scripts --no-autoloader
+# Install staging dependencies
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Copy application code
 COPY . .
 
-# Generate autoloader
+# Generate optimized autoloader
 RUN composer dump-autoload --optimize
 
 # Set permissions
@@ -63,9 +63,13 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-# Copy PHP configuration
-COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-custom.ini
+# Copy PHP configuration for staging
+COPY docker/php/php-staging.ini /usr/local/etc/php/conf.d/99-custom.ini
 COPY docker/php/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD php-fpm -t || exit 1
 
 # Expose port
 EXPOSE 9000
