@@ -45,7 +45,7 @@ DB_DATABASE=database/database.sqlite
 #### Staging Environment
 ```env
 DB_CONNECTION=mysql
-DB_HOST=mysql                   # Docker container name
+DB_HOST=127.0.0.1               # Native MySQL installation
 DB_PORT=3306
 DB_DATABASE=controle_financeiro_staging
 DB_USERNAME=staging_user
@@ -56,7 +56,7 @@ DB_SSL_MODE=REQUIRED
 #### Production Environment
 ```env
 DB_CONNECTION=mysql
-DB_HOST=mysql
+DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=controle_financeiro
 DB_USERNAME=laravel_user
@@ -146,7 +146,7 @@ REDIS_PORT=6379
 #### Staging Environment
 ```env
 REDIS_CLIENT=phpredis
-REDIS_HOST=redis               # Docker container
+REDIS_HOST=127.0.0.1           # Native Redis installation
 REDIS_PASSWORD=CHANGE_THIS_STAGING_REDIS_PASSWORD
 REDIS_PORT=6379
 ```
@@ -154,7 +154,7 @@ REDIS_PORT=6379
 #### Production Environment
 ```env
 REDIS_CLIENT=phpredis
-REDIS_HOST=redis
+REDIS_HOST=127.0.0.1
 REDIS_PASSWORD=CHANGE_THIS_STRONG_REDIS_PASSWORD
 REDIS_PORT=6379
 REDIS_DB=0

@@ -4,19 +4,19 @@ Sistema completo de controle financeiro pessoal desenvolvido em Laravel com Fila
 
 ## ⚠️ IMPORTANTE: Política de Ambientes
 
-Este projeto segue uma política rigorosa de ambientes:
+Este projeto utiliza ambientes 100% nativos:
 
-### 🚫 NUNCA USE DOCKER PARA DESENVOLVIMENTO LOCAL!
+### 🏠 Desenvolvimento e Staging: 100% NATIVO
 
 - **🏠 Desenvolvimento Local**: 100% NATIVO (PHP + MySQL + Composer nativos)
-- **🚀 Staging no VPS**: 100% Docker
+- **🚀 Staging no VPS**: 100% NATIVO (sem Docker devido às limitações de hardware)
 
-### Por que essa separação?
+### Por que ambientes nativos?
 
-- **Desenvolvimento Nativo**: Máxima velocidade, hot reload instantâneo, debugging nativo
-- **Staging Docker**: Ambiente controlado, isolado e replicável para testes
-
-**⚠️ ATENÇÃO**: Docker é usado APENAS para staging! Desenvolvimento é 100% nativo!
+- **Performance Máxima**: Sem overhead de virtualização
+- **Simplicidade**: Configuração direta e debugging nativo
+- **Compatibilidade**: Funciona em VPS com recursos limitados
+- **Velocidade**: Hot reload instantâneo e máxima responsividade
 
 ## ✨ Funcionalidades
 
@@ -70,9 +70,7 @@ php artisan serve
 
 📖 **Guia completo**: [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md)
 
-## 🐳 Staging (Docker APENAS)
-
-### ⚠️ IMPORTANTE: Docker é APENAS para Staging!
+## 🚀 Staging (Nativo no VPS)
 
 ### Staging no VPS
 
@@ -88,23 +86,8 @@ cp .env.staging .env
 # 3. Execute deploy para staging
 ./scripts/deploy-staging.sh
 
-# 4. Configure SSL
-./scripts/setup-ssl-staging.sh
-```
-
-📖 **Guia completo**: [STAGING_DOCKER_SETUP.md](STAGING_DOCKER_SETUP.md)
-
-### Solução de Problemas
-
-Se houver problemas na compilação do Redis, o script automaticamente tentará usar uma versão simplificada:
-
-```bash
-# Se o build falhar, tente manualmente:
-docker-compose -f docker-compose.simple.yml up -d
-
-# Ou use o Dockerfile simplificado:
-cp Dockerfile.simple Dockerfile
-docker-compose build --no-cache
+# 4. Configure SSL nativo
+# Configure SSL diretamente no servidor web (Apache/Nginx)
 ```
 
 ### Usuários Padrão
@@ -119,48 +102,44 @@ Após a inicialização, você pode fazer login com:
 ### Comandos Úteis
 
 ```bash
-# Ver status dos containers
-docker-compose ps
-
-# Acessar container da aplicação
-docker-compose exec app bash
-
 # Executar testes
-docker-compose exec app php artisan test
+php artisan test
 
-# Ver logs
-docker-compose logs -f
+# Ver logs da aplicação
+tail -f storage/logs/laravel.log
 
-# Backup do banco
-./scripts/backup-database.sh
+# Executar migrações
+php artisan migrate
+
+# Limpar cache
+php artisan cache:clear
 ```
 
 ### Estrutura do Projeto
 
 ```
 ├── app/                    # Código da aplicação Laravel
-├── docker/                 # Configurações Docker
 ├── scripts/                # Scripts utilitários
-├── docker-compose.yml      # Ambiente de desenvolvimento
-
-├── Dockerfile             # Imagem da aplicação
-└── DOCKER.md              # Documentação Docker detalhada
+├── config/                 # Configurações Laravel
+├── database/               # Migrações e seeders
+├── resources/              # Views e assets
+└── storage/                # Logs e cache
 ```
 
 ## � Docume ntação
 
-- [📖 Guia Docker](DOCKER.md) - Configuração e uso do Docker
-- [🚀 Deploy para Staging](STAGING_DOCKER_SETUP.md) - Guia de deploy
+- [🏠 Setup de Desenvolvimento](DEVELOPMENT_SETUP.md) - Guia de configuração local
+- [🚀 Deploy para Staging](scripts/deploy-staging.sh) - Script de deploy
 - [🔧 Especificações](/.kiro/specs/controle-financeiro-simples/) - Documentação técnica
 
 ## 🧪 Testes
 
 ```bash
 # Executar todos os testes
-docker-compose exec app php artisan test
+php artisan test
 
 # Testes com coverage
-docker-compose exec app php artisan test --coverage
+php artisan test --coverage
 ```
 
 ## 🔒 Segurança
@@ -175,24 +154,24 @@ docker-compose exec app php artisan test --coverage
 ## 🛡️ Backup e Recuperação
 
 ```bash
-# Criar backup
-./scripts/backup-database.sh
+# Criar backup do banco MySQL nativo
+mysqldump -u username -p database_name > backup.sql
 
 # Restaurar backup
-./scripts/backup-database.sh restore backup_file.sql.gz
-
-# Listar backups
-./scripts/backup-database.sh list
+mysql -u username -p database_name < backup.sql
 ```
 
 ## 📊 Monitoramento
 
 ```bash
 # Verificar saúde da aplicação
-./scripts/health-check.sh
+curl http://localhost:8000/health
 
-# Ver métricas dos containers
-docker stats
+# Verificar logs
+tail -f storage/logs/laravel.log
+
+# Verificar status do MySQL
+mysqladmin ping -u username -p
 ```
 
 ## 🤝 Contribuição
@@ -209,7 +188,7 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 ## 🆘 Suporte
 
-- 📖 [Documentação](DOCKER.md)
+- 📖 [Setup de Desenvolvimento](DEVELOPMENT_SETUP.md)
 - 🐛 [Issues](https://github.com/seu-usuario/controle-financeiro/issues)
 - 💬 [Discussões](https://github.com/seu-usuario/controle-financeiro/discussions)
 
@@ -217,9 +196,9 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 - **Backend**: Laravel 12, PHP 8.2
 - **Frontend**: Filament 3, Tailwind CSS
-- **Banco**: MySQL 8.0
-- **Cache**: Redis 7
-- **Containerização**: Docker, Docker Compose
+- **Banco**: MySQL 8.0 (nativo)
+- **Cache**: Redis 7 (nativo)
+- **Servidor**: Apache/Nginx (nativo)
 - **CI/CD**: GitHub Actions
 
 ---

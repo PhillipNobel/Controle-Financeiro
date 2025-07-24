@@ -1,14 +1,16 @@
 #!/bin/bash
 
-# Health Check Script for Staging Environment
-# This script performs comprehensive health checks on the staging environment
+# Native Staging Health Check Script
+# This script performs comprehensive health checks for the native staging environment
 
 set -e
 
 # Configuration
-COMPOSE_FILE="docker-compose.yml"
 APP_URL="${APP_URL:-https://staging.controle-financeiro.com}"
-TIMEOUT=30
+APP_PATH="${APP_PATH:-/var/www/html/controle-financeiro}"
+MYSQL_USER="${MYSQL_USER:-staging_user}"
+MYSQL_DB="${MYSQL_DB:-controle_financeiro_staging}"
+PHP_USER="${PHP_USER:-www-data}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -19,135 +21,203 @@ NC='\033[0m' # No Color
 
 # Logging functions
 log() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}"
 }
 
 success() {
-    echo -e "${GREEN}[✓]${NC} $1"
+    echo -e "${GREEN}[✓] $1${NC}"
 }
 
 error() {
-    echo -e "${RED}[✗]${NC} $1"
+    echo -e "${RED}[✗] $1${NC}"
 }
 
 warning() {
-    echo -e "${YELLOW}[!]${NC} $1"
+    echo -e "${YELLOW}[!] $1${NC}"
 }
 
-# Check if container is running
-check_container() {
-    local container_name=$1
-    local service_name=$2
+# Check system services
+check_system_services() {
+    log "Checking system services..."
     
-    if docker ps --format "table {{.Names}}" | grep -q "^$container_name$"; then
-        success "$service_name container is running"
-        return 0
+    # Check OpenLiteSpeed
+    if systemctl is-active --quiet lshttpd; then
+        success "OpenLiteSpeed is running"
     else
-        error "$service_name container is not running"
+        error "OpenLiteSpeed is not running"
         return 1
     fi
-}
-
-# Check container health status
-check_container_health() {
-    local container_name=$1
-    local service_name=$2
     
-    local health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "no-healthcheck")
-    
-    case $health_status in
-        "healthy")
-            success "$service_name container is healthy"
-            return 0
-            ;;
-        "unhealthy")
-            error "$service_name container is unhealthy"
-            return 1
-            ;;
-        "starting")
-            warning "$service_name container is still starting"
-            return 1
-            ;;
-        "no-healthcheck")
-            warning "$service_name container has no health check configured"
-            return 0
-            ;;
-        *)
-            error "$service_name container health status unknown: $health_status"
-            return 1
-            ;;
-    esac
-}
-
-# Check application health
-check_application_health() {
-    log "Checking application health..."
-    
-    if docker exec controle-financeiro-app-staging php artisan health:check --detailed --no-interaction; then
-        success "Application health check passed"
-        return 0
+    # Check MySQL
+    if systemctl is-active --quiet mysql; then
+        success "MySQL is running"
     else
-        error "Application health check failed"
+        error "MySQL is not running"
         return 1
     fi
+    
+    return 0
+}
+
+# Check PHP configuration
+check_php() {
+    log "Checking PHP configuration..."
+    
+    # Check PHP version
+    local php_version=$(php -r "echo PHP_VERSION;")
+    log "PHP version: $php_version"
+    
+    # Check required PHP extensions
+    local required_extensions=("pdo" "pdo_mysql" "mbstring" "openssl" "tokenizer" "xml" "ctype" "json" "bcmath")
+    local missing_extensions=()
+    
+    for ext in "${required_extensions[@]}"; do
+        if php -m | grep -q "^$ext$"; then
+            success "PHP extension '$ext' is loaded"
+        else
+            error "PHP extension '$ext' is missing"
+            missing_extensions+=("$ext")
+        fi
+    done
+    
+    if [[ ${#missing_extensions[@]} -gt 0 ]]; then
+        error "Missing PHP extensions: ${missing_extensions[*]}"
+        return 1
+    fi
+    
+    return 0
 }
 
 # Check database connectivity
 check_database() {
     log "Checking database connectivity..."
     
-    # Check if MySQL container is responding
-    if docker exec controle-financeiro-mysql-staging mysqladmin ping -h localhost --silent; then
-        success "MySQL is responding to ping"
+    cd "$APP_PATH"
+    
+    # Test database connection
+    if sudo -u "$PHP_USER" php artisan tinker --execute="DB::connection()->getPdo(); echo 'Database connection OK';" 2>/dev/null | grep -q "Database connection OK"; then
+        success "Database connection is working"
     else
-        error "MySQL is not responding to ping"
+        error "Database connection failed"
         return 1
     fi
     
-    # Check database connection through application
-    if docker exec controle-financeiro-app-staging php artisan tinker --execute="DB::connection()->getPdo(); echo 'Database connection OK';" 2>/dev/null | grep -q "Database connection OK"; then
-        success "Application can connect to database"
-        return 0
+    # Check database tables
+    local table_count=$(sudo -u "$PHP_USER" php artisan tinker --execute="echo DB::select('SHOW TABLES')[0] ? count(DB::select('SHOW TABLES')) : 0;" 2>/dev/null | tail -1)
+    if [[ "$table_count" -gt 0 ]]; then
+        success "Database has $table_count tables"
     else
-        error "Application cannot connect to database"
-        return 1
+        warning "Database appears to be empty"
     fi
+    
+    return 0
 }
 
-# Check cache functionality
-check_cache() {
-    log "Checking cache functionality..."
+# Check application files and permissions
+check_application() {
+    log "Checking application files and permissions..."
     
-    # Check if cache is working through application
-    if docker exec controle-financeiro-app-staging php artisan tinker --execute="Cache::put('test', 'value', 60); echo Cache::get('test');" 2>/dev/null | grep -q "value"; then
-        success "Application cache is working"
-        return 0
+    # Check if application directory exists
+    if [[ -d "$APP_PATH" ]]; then
+        success "Application directory exists: $APP_PATH"
     else
-        error "Application cache is not working"
-        return 1
-    fi
-}
-
-# Check web server
-check_web_server() {
-    log "Checking web server..."
-    
-    # Check if nginx container is responding
-    if curl -f -s -o /dev/null --max-time $TIMEOUT "$APP_URL/health"; then
-        success "Web server is responding"
-    else
-        error "Web server is not responding"
+        error "Application directory not found: $APP_PATH"
         return 1
     fi
     
-    # Check SSL certificate (if HTTPS)
-    if [[ $APP_URL == https://* ]]; then
-        local domain=$(echo "$APP_URL" | sed 's|https://||' | sed 's|/.*||')
-        if echo | openssl s_client -servername "$domain" -connect "$domain:443" 2>/dev/null | openssl x509 -noout -dates 2>/dev/null; then
-            success "SSL certificate is valid"
+    # Check key Laravel files
+    local key_files=("artisan" "composer.json" ".env" "app/Http/Kernel.php")
+    for file in "${key_files[@]}"; do
+        if [[ -f "$APP_PATH/$file" ]]; then
+            success "Key file exists: $file"
         else
-            warning "SSL certificate check failed or certificate is invalid"
+            error "Key file missing: $file"
+            return 1
         fi
+    done
+    
+    # Check writable directories
+    local writable_dirs=("storage" "bootstrap/cache")
+    for dir in "${writable_dirs[@]}"; do
+        if [[ -w "$APP_PATH/$dir" ]]; then
+            success "Directory is writable: $dir"
+        else
+            error "Directory is not writable: $dir"
+            return 1
+        fi
+    done
+    
+    # Check vendor directory
+    if [[ -d "$APP_PATH/vendor" ]]; then
+        success "Composer dependencies are installed"
+    else
+        error "Composer dependencies not found"
+        return 1
+    fi
+    
+    return 0
+}
+
+# Check Laravel application
+check_laravel() {
+    log "Checking Laravel application..."
+    
+    cd "$APP_PATH"
+    
+    # Check if Laravel can boot
+    if sudo -u "$PHP_USER" php artisan --version >/dev/null 2>&1; then
+        local laravel_version=$(sudo -u "$PHP_USER" php artisan --version)
+        success "Laravel is working: $laravel_version"
+    else
+        error "Laravel cannot boot properly"
+        return 1
+    fi
+    
+    # Check environment
+    local app_env=$(sudo -u "$PHP_USER" php artisan tinker --execute="echo config('app.env');" 2>/dev/null | tail -1)
+    if [[ "$app_env" == "staging" ]]; then
+        success "Application environment: $app_env"
+    else
+        warning "Application environment: $app_env (expected: staging)"
+    fi
+    
+    # Check application key
+    if sudo -u "$PHP_USER" php artisan tinker --execute="echo config('app.key') ? 'SET' : 'NOT SET';" 2>/dev/null | grep -q "SET"; then
+        success "Application key is set"
+    else
+        error "Application key is not set"
+        return 1
+    fi
+    
+    return 0
+}
+
+# Check web server response
+check_web_response() {
+    log "Checking web server response..."
+    
+    # Test main URL
+    if curl -f -s -o /dev/null --max-time 30 "$APP_URL"; then
+        success "Main URL is responding: $APP_URL"
+    else
+        error "Main URL is not responding: $APP_URL"
+        return 1
+    fi
+    
+    # Test health endpoint if it exists
+    if curl -f -s -o /dev/null --max-time 30 "$APP_URL/health" 2>/dev/null; then
+        success "Health endpoint is responding: $APP_URL/health"
+    else
+        warning "Health endpoint not available: $APP_URL/health"
+    fi
+    
+    # Check response time
+    local response_time=$(curl -o /dev/null -s -w '%{time_total}' --max-time 30 "$APP_URL" 2>/dev/null || echo "timeout")
+    if [[ "$response_time" != "timeout" ]]; then
+        local response_ms=$(echo "$response_time * 1000" | bc 2>/dev/null || echo "unknown")
+        success "Response time: ${response_ms}ms"
+    else
+        warning "Could not measure response time"
     fi
     
     return 0
@@ -157,72 +227,50 @@ check_web_server() {
 check_disk_space() {
     log "Checking disk space..."
     
-    # Check host disk space
-    local disk_usage=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
-    if [[ $disk_usage -lt 80 ]]; then
-        success "Host disk usage is acceptable ($disk_usage%)"
-    elif [[ $disk_usage -lt 90 ]]; then
-        warning "Host disk usage is high ($disk_usage%)"
+    # Check application directory disk usage
+    local app_usage=$(du -sh "$APP_PATH" 2>/dev/null | cut -f1)
+    log "Application directory size: $app_usage"
+    
+    # Check available disk space
+    local available_space=$(df -h "$APP_PATH" | awk 'NR==2 {print $4}')
+    local used_percent=$(df -h "$APP_PATH" | awk 'NR==2 {print $5}' | sed 's/%//')
+    
+    log "Available disk space: $available_space"
+    log "Disk usage: $used_percent%"
+    
+    if [[ "$used_percent" -lt 90 ]]; then
+        success "Disk space is adequate"
     else
-        error "Host disk usage is critical ($disk_usage%)"
-        return 1
+        warning "Disk space is running low ($used_percent% used)"
     fi
-    
-    # Check Docker volumes
-    docker system df --format "table {{.Type}}\t{{.TotalCount}}\t{{.Size}}\t{{.Reclaimable}}" | while read line; do
-        if [[ $line == *"Volumes"* ]]; then
-            log "Docker volumes: $line"
-        fi
-    done
-    
-    return 0
-}
-
-# Check memory usage
-check_memory_usage() {
-    log "Checking memory usage..."
-    
-    # Check host memory
-    local mem_info=$(free | grep Mem)
-    local total_mem=$(echo $mem_info | awk '{print $2}')
-    local used_mem=$(echo $mem_info | awk '{print $3}')
-    local mem_percentage=$((used_mem * 100 / total_mem))
-    
-    if [[ $mem_percentage -lt 80 ]]; then
-        success "Host memory usage is acceptable ($mem_percentage%)"
-    elif [[ $mem_percentage -lt 90 ]]; then
-        warning "Host memory usage is high ($mem_percentage%)"
-    else
-        error "Host memory usage is critical ($mem_percentage%)"
-        return 1
-    fi
-    
-    # Check container memory usage
-    docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" | grep controle-financeiro | while read line; do
-        log "Container stats: $line"
-    done
     
     return 0
 }
 
 # Check logs for errors
 check_logs() {
-    log "Checking recent logs for errors..."
+    log "Checking application logs..."
     
-    # Check application logs
-    local app_errors=$(docker logs controle-financeiro-app-staging --since="1h" 2>&1 | grep -i "error\|exception\|fatal" | wc -l)
-    if [[ $app_errors -eq 0 ]]; then
-        success "No recent errors in application logs"
-    else
-        warning "Found $app_errors recent errors in application logs"
-    fi
+    local log_file="$APP_PATH/storage/logs/laravel.log"
     
-    # Check nginx logs
-    local nginx_errors=$(docker logs controle-financeiro-nginx-staging --since="1h" 2>&1 | grep -i "error" | wc -l)
-    if [[ $nginx_errors -eq 0 ]]; then
-        success "No recent errors in nginx logs"
+    if [[ -f "$log_file" ]]; then
+        # Check for recent errors (last 100 lines)
+        local error_count=$(tail -100 "$log_file" | grep -c "ERROR" || echo "0")
+        local warning_count=$(tail -100 "$log_file" | grep -c "WARNING" || echo "0")
+        
+        if [[ "$error_count" -eq 0 ]]; then
+            success "No recent errors in application log"
+        else
+            warning "Found $error_count recent errors in application log"
+        fi
+        
+        if [[ "$warning_count" -eq 0 ]]; then
+            success "No recent warnings in application log"
+        else
+            log "Found $warning_count recent warnings in application log"
+        fi
     else
-        warning "Found $nginx_errors recent errors in nginx logs"
+        warning "Application log file not found: $log_file"
     fi
     
     return 0
@@ -230,72 +278,84 @@ check_logs() {
 
 # Main health check function
 main() {
-    echo "=== Staging Environment Health Check ==="
+    echo "=== Native Staging Health Check ==="
     echo "Timestamp: $(date)"
-    echo "Environment: staging"
-    echo "Application URL: $APP_URL"
+    echo "Target URL: $APP_URL"
+    echo "Application Path: $APP_PATH"
     echo ""
     
-    local overall_status=0
+    local failed_checks=0
     
-    # Container status checks
-    log "=== Container Status ==="
-    check_container "controle-financeiro-app-staging" "Application" || overall_status=1
-    check_container "controle-financeiro-nginx-staging" "Nginx" || overall_status=1
-    check_container "controle-financeiro-mysql-staging" "MySQL" || overall_status=1
-
+    # Run all health checks
+    check_system_services || ((failed_checks++))
     echo ""
     
-    # Container health checks
-    log "=== Container Health ==="
-    check_container_health "controle-financeiro-app-staging" "Application" || overall_status=1
-    check_container_health "controle-financeiro-nginx-staging" "Nginx" || overall_status=1
-    check_container_health "controle-financeiro-mysql-staging" "MySQL" || overall_status=1
-
+    check_php || ((failed_checks++))
     echo ""
     
-    # Service connectivity checks
-    log "=== Service Connectivity ==="
-    check_application_health || overall_status=1
-    check_database || overall_status=1
-    check_cache || overall_status=1
-    check_web_server || overall_status=1
+    check_database || ((failed_checks++))
     echo ""
     
-    # System resource checks
-    log "=== System Resources ==="
-    check_disk_space || overall_status=1
-    check_memory_usage || overall_status=1
+    check_application || ((failed_checks++))
     echo ""
     
-    # Log analysis
-    log "=== Log Analysis ==="
-    check_logs || overall_status=1
+    check_laravel || ((failed_checks++))
+    echo ""
+    
+    check_web_response || ((failed_checks++))
+    echo ""
+    
+    check_disk_space || ((failed_checks++))
+    echo ""
+    
+    check_logs || ((failed_checks++))
     echo ""
     
     # Summary
-    echo "=== Health Check Summary ==="
-    if [[ $overall_status -eq 0 ]]; then
-        success "All health checks passed - staging environment is healthy"
+    if [[ $failed_checks -eq 0 ]]; then
+        success "All health checks passed!"
+        echo ""
+        log "System is healthy and ready for production traffic"
+        exit 0
     else
-        error "Some health checks failed - staging environment needs attention"
+        error "$failed_checks health check(s) failed"
+        echo ""
+        log "Please review the failed checks above"
+        exit 1
     fi
-    
-    exit $overall_status
 }
 
 # Handle command line arguments
 case "${1:-}" in
-    --json)
-        # TODO: Implement JSON output format
-        echo "JSON output not yet implemented"
-        exit 1
+    --quick)
+        log "Running quick health check (web response only)"
+        check_web_response
+        exit $?
         ;;
-    --quiet)
-        # Redirect output to suppress verbose logging
-        exec > /dev/null 2>&1
+    --database)
+        log "Running database check only"
+        check_database
+        exit $?
+        ;;
+    --services)
+        log "Running system services check only"
+        check_system_services
+        exit $?
+        ;;
+    --help)
+        echo "Usage: $0 [OPTIONS]"
+        echo ""
+        echo "Options:"
+        echo "  --quick      Quick health check (web response only)"
+        echo "  --database   Database connectivity check only"
+        echo "  --services   System services check only"
+        echo "  --help       Show this help message"
+        echo ""
+        echo "Default: Run all health checks"
+        echo ""
+        exit 0
         ;;
 esac
 
-# Run main function
+# Run main health check
 main "$@"

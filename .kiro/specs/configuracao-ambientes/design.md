@@ -2,7 +2,7 @@
 
 ## Overview
 
-Este documento descreve o design da arquitetura de ambientes para o sistema de Controle Financeiro, estabelecendo uma estrutura clara para desenvolvimento local nativo e staging no VPS usando Docker.
+Este documento descreve o design da arquitetura de ambientes para o sistema de Controle Financeiro, estabelecendo uma estrutura clara para desenvolvimento local nativo e staging no VPS também nativo (sem Docker), devido às limitações de hardware do VPS.
 
 ## Architecture
 
@@ -11,27 +11,28 @@ Este documento descreve o design da arquitetura de ambientes para o sistema de C
 ```
 ┌─────────────────┐    ┌─────────────────┐
 │   DEVELOPMENT   │    │     STAGING     │
-│  (Local Native) │───▶│  (VPS Docker)   │
-│   NO DOCKER!    │    │  DOCKER ONLY!   │
+│  (Local Native) │───▶│  (VPS Native)   │
+│   NO DOCKER!    │    │   NO DOCKER!    │
 └─────────────────┘    └─────────────────┘
 │                      │
-│ • PHP 8.3+ Native    │ • PHP Docker
-│ • MySQL Native       │ • MySQL Docker
+│ • PHP 8.3+ Native    │ • PHP 8.3+ Native
+│ • MySQL Native       │ • MySQL Native
 │ • File Cache         │ • File Cache
-│ • Local Files        │ • Docker Volumes
+│ • Local Files        │ • VPS Files
 │ • Debug ON           │ • Debug Limited
-│ • Hot Reload         │ • Optimized Build
-│ • Artisan Serve      │ • Nginx + PHP-FPM
-│ • MAMP/XAMPP/Herd    │ • Containerized
-│ • Composer Local     │ • Docker Compose
+│ • Hot Reload         │ • Production Build
+│ • Artisan Serve      │ • OpenLiteSpeed
+│ • MAMP/XAMPP/Herd    │ • Pre-installed Stack
+│ • Composer Local     │ • Composer VPS
 │ • SQLite Tests       │ • MySQL Tests
 │ • Xdebug Native      │ • Logs Estruturados
 │ • MailHog Native     │ • SSL/HTTPS
 │ • Zero Containers    │ • Health Checks
 └──────────────────────┴──────────────────────
 
-IMPORTANTE: Docker é PROIBIDO para desenvolvimento local!
-Desenvolvimento = 100% nativo, Staging = 100% Docker
+IMPORTANTE: Docker foi REMOVIDO completamente!
+Desenvolvimento = 100% nativo, Staging = 100% nativo
+Hardware limitado do VPS não suporta Docker
 ```
 
 ### Configuration Management
@@ -43,7 +44,7 @@ graph TD
     B -->|staging| D[Staging Config]
     
     C --> F[MySQL Native + File Cache]
-    D --> G[MySQL Docker + File Cache]
+    D --> G[MySQL Native + File Cache]
     
     F --> I[Local Development]
     G --> J[VPS Staging]
@@ -97,18 +98,18 @@ interface EnvironmentConfigInterface
 ]
 ```
 
-**Staging (VPS)**:
+**Staging (VPS Native)**:
 ```php
 'default' => 'mysql',
 'connections' => [
     'mysql' => [
         'driver' => 'mysql',
-        'host' => env('DB_HOST', 'mysql'),
+        'host' => env('DB_HOST', '127.0.0.1'),
         'port' => env('DB_PORT', '3306'),
         'database' => env('DB_DATABASE', 'controle_financeiro_staging'),
-        'options' => [
-            PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-        ],
+        'username' => env('DB_USERNAME', 'staging_user'),
+        'password' => env('DB_PASSWORD', ''),
+        // Native MySQL installed on VPS
     ]
 ]
 ```
@@ -147,11 +148,11 @@ interface EnvironmentConfigInterface
 ]
 ```
 
-### 4. Docker Configuration Manager
+### 4. Native Configuration Manager
 
-**Purpose**: Provide Docker setup for staging environment only
+**Purpose**: Provide native setup for both development and staging environments
 
-**Local Development** (100% NATIVO - ZERO Docker):
+**Local Development** (100% NATIVO):
 - Native PHP 8.3+ via `php artisan serve` (porta 8000) ou Laravel Herd
 - Native MySQL via MAMP/XAMPP/Homebrew/Laravel Herd (porta 3306)
 - File-based cache and sessions para máxima velocidade de desenvolvimento
@@ -160,20 +161,23 @@ interface EnvironmentConfigInterface
 - Composer install local para vendor/ nativo
 - Xdebug nativo para debugging com IDEs
 - Ferramentas auxiliares nativas opcionais (MailHog local, Redis local)
-- ZERO containers, ZERO Docker Compose para desenvolvimento
+- ZERO containers, ZERO Docker
 - Configuração via .env.local para ambiente nativo
 - Performance máxima sem overhead de virtualização
-- REMOÇÃO COMPLETA de docker-compose.local.yml e scripts Docker para desenvolvimento
-- REMOÇÃO COMPLETA de scripts/docker-dev.sh e configurações Docker de desenvolvimento
-- Documentação clara: Docker é PROIBIDO para desenvolvimento local
-- Limpeza de todas as referências Docker em documentação de desenvolvimento
 
-**Staging Docker**:
-- Optimized MySQL setup
+**Staging Native (VPS)**:
+- Native PHP 8.3+ pré-instalado no VPS
+- Native MySQL pré-instalado no VPS
+- OpenLiteSpeed configurado com SSL
 - File-based cache and sessions for simplicity
-- Nginx with SSL termination
-- Health checks and monitoring
-- Backup volumes
+- Health checks via scripts nativos
+- Backup via scripts nativos
+- Configuração via .env.staging
+- ZERO Docker devido às limitações de hardware do VPS
+- REMOÇÃO COMPLETA de todos os arquivos Docker do projeto
+- REMOÇÃO COMPLETA de docker-compose files
+- REMOÇÃO COMPLETA de scripts Docker
+- REMOÇÃO COMPLETA de configurações Docker
 
 
 
@@ -196,7 +200,7 @@ class EnvironmentConfig
     public function isLocal(): bool;
     public function isStaging(): bool;
 
-    public function getDockerCompose(): string;
+
 }
 ```
 
@@ -230,10 +234,10 @@ class DeploymentConfig
 - Fallback database configurations
 - Clear error messages for setup issues
 
-### Docker Configuration Errors
-- Automatic fallback to simplified Docker setup
-- Resource requirement validation
-- Clear troubleshooting guidance
+### Native Configuration Errors
+- Automatic fallback to safe native configurations
+- Resource requirement validation for VPS
+- Clear troubleshooting guidance for native setups
 
 ## Testing Strategy
 
@@ -245,8 +249,8 @@ php artisan test --env=testing
 # Feature tests with local database
 php artisan test --env=local
 
-# Docker integration tests (optional)
-./scripts/test-docker-local.sh
+# Native integration tests
+./scripts/test-native-integration.sh
 ```
 
 ### Staging Testing
@@ -287,7 +291,7 @@ sequenceDiagram
     Dev->>Git: git push origin main
     Git->>VPS: Webhook/Manual Pull
     VPS->>VPS: Backup Current State
-    VPS->>VPS: Build Docker Images
+    VPS->>VPS: Update Native Application
     VPS->>VPS: Run Database Migrations
     VPS->>App: Deploy New Version
     App->>VPS: Health Check
@@ -323,11 +327,11 @@ sequenceDiagram
 - SSL connections in staging
 - Regular security updates
 
-### Docker Security
-- Non-root containers
-- Minimal base images
-- Regular image updates
-- Secret management via Docker secrets
+### Native Security
+- Non-root user execution
+- Proper file permissions
+- Regular system updates
+- Environment variable management
 
 ## Performance Optimizations
 
@@ -338,12 +342,12 @@ sequenceDiagram
 - Minimal logging
 
 ### Staging
-- Optimized performance
+- Native performance optimization
 - File-based caching for simplicity
 - Optimized queries
-- Performance monitoring
+- Performance monitoring via native tools
 - CDN integration
-- Load balancing preparation
+- OpenLiteSpeed optimization for limited hardware
 
 ## Monitoring and Logging
 
@@ -391,8 +395,8 @@ docs/
 │   ├── staging-deployment.md
 │   ├── rollback-procedures.md
 │   └── backup-restore.md
-└── docker/
-    ├── local-docker.md
-    ├── staging-docker.md
-    └── docker-troubleshooting.md
+└── native/
+    ├── vps-setup.md
+    ├── openlitespeed-configuration.md
+    └── native-troubleshooting.md
 ```

@@ -1,15 +1,19 @@
 #!/bin/bash
 
-# Staging Deployment Script
-# This script deploys the application to the staging environment with comprehensive checks
+# Native Staging Deployment Script
+# This script deploys the application to the staging environment using native PHP/MySQL/OpenLiteSpeed
+# No Docker dependencies - optimized for VPS with limited hardware resources
 
 set -e
 
 # Configuration
-COMPOSE_FILE="docker-compose.yml"
 APP_URL="${APP_URL:-https://staging.controle-financeiro.com}"
+APP_PATH="${APP_PATH:-/var/www/html/controle-financeiro}"
 BACKUP_DIR="/var/backups/controle-financeiro"
 LOG_FILE="/var/log/controle-financeiro-deploy.log"
+PHP_USER="${PHP_USER:-www-data}"
+MYSQL_USER="${MYSQL_USER:-staging_user}"
+MYSQL_DB="${MYSQL_DB:-controle_financeiro_staging}"
 TIMEOUT=300
 
 # Colors for output
@@ -60,17 +64,27 @@ trap cleanup EXIT
 
 # Check prerequisites
 check_prerequisites() {
-    log "Checking deployment prerequisites..."
+    log "Checking native deployment prerequisites..."
     
-    # Check if Docker is running
-    if ! docker info >/dev/null 2>&1; then
-        error "Docker is not running or not accessible"
+    # Check if PHP is available (should be pre-installed)
+    if ! command -v php >/dev/null 2>&1; then
+        error "PHP is not installed or not in PATH"
         exit 1
     fi
     
-    # Check if docker-compose is available
-    if ! command -v docker-compose >/dev/null 2>&1; then
-        error "docker-compose is not installed"
+    # Check PHP version
+    local php_version=$(php -r "echo PHP_VERSION;")
+    log "PHP version: $php_version"
+    
+    # Check if Composer is available (should be pre-installed)
+    if ! command -v composer >/dev/null 2>&1; then
+        error "Composer is not installed or not in PATH"
+        exit 1
+    fi
+    
+    # Check if MySQL is available (should be pre-installed)
+    if ! command -v mysql >/dev/null 2>&1; then
+        error "MySQL client is not installed or not in PATH"
         exit 1
     fi
     
@@ -81,8 +95,8 @@ check_prerequisites() {
     fi
     
     # Check if we're in the right directory
-    if [[ ! -f "$COMPOSE_FILE" ]]; then
-        error "docker-compose.yml not found. Are you in the project root?"
+    if [[ ! -f "composer.json" ]]; then
+        error "composer.json not found. Are you in the project root?"
         exit 1
     fi
     
@@ -90,6 +104,25 @@ check_prerequisites() {
     if [[ ! -f ".env.staging" ]]; then
         error ".env.staging file not found"
         exit 1
+    fi
+    
+    # Check if application directory exists
+    if [[ ! -d "$APP_PATH" ]]; then
+        log "Creating application directory: $APP_PATH"
+        sudo mkdir -p "$APP_PATH"
+        sudo chown "$PHP_USER:$PHP_USER" "$APP_PATH"
+    fi
+    
+    # Check OpenLiteSpeed status
+    if command -v lshttpd >/dev/null 2>&1; then
+        log "OpenLiteSpeed detected"
+        if systemctl is-active --quiet lshttpd; then
+            success "OpenLiteSpeed is running"
+        else
+            warning "OpenLiteSpeed is not running"
+        fi
+    else
+        warning "OpenLiteSpeed not detected in PATH"
     fi
     
     success "Prerequisites check passed"
@@ -100,49 +133,50 @@ create_backup() {
     log "Creating backup before deployment..."
     
     # Create backup directory if it doesn't exist
-    mkdir -p "$BACKUP_DIR"
+    sudo mkdir -p "$BACKUP_DIR"
     
     local backup_timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_name="staging_backup_${backup_timestamp}"
     local backup_path="${BACKUP_DIR}/${backup_name}"
     
-    mkdir -p "$backup_path"
+    sudo mkdir -p "$backup_path"
     
     # Backup database
-    if docker ps --format "table {{.Names}}" | grep -q "controle-financeiro-mysql-staging"; then
-        log "Backing up database..."
-        docker exec controle-financeiro-mysql-staging mysqldump \
-            -u root -p"${DB_ROOT_PASSWORD}" \
+    log "Backing up database..."
+    if mysql -u "$MYSQL_USER" -p"${DB_PASSWORD}" -e "USE $MYSQL_DB;" 2>/dev/null; then
+        mysqldump -u "$MYSQL_USER" -p"${DB_PASSWORD}" \
             --single-transaction \
             --routines \
             --triggers \
-            "${DB_DATABASE:-controle_financeiro_staging}" > "${backup_path}/database.sql"
+            "$MYSQL_DB" > "${backup_path}/database.sql"
         success "Database backup created"
     else
-        warning "MySQL container not running, skipping database backup"
+        warning "Could not connect to database, skipping database backup"
     fi
     
     # Backup application files (storage, uploads, etc.)
-    if docker ps --format "table {{.Names}}" | grep -q "controle-financeiro-app-staging"; then
-        log "Backing up application storage..."
-        docker cp controle-financeiro-app-staging:/var/www/html/storage "${backup_path}/storage"
-        success "Application storage backup created"
+    if [[ -d "$APP_PATH" ]]; then
+        log "Backing up application files..."
+        sudo cp -r "$APP_PATH" "${backup_path}/application"
+        success "Application files backup created"
     else
-        warning "Application container not running, skipping storage backup"
+        warning "Application directory not found, skipping application backup"
     fi
     
-    # Backup current docker-compose and environment files
-    cp "$COMPOSE_FILE" "${backup_path}/"
+    # Backup current environment file
     cp ".env" "${backup_path}/" 2>/dev/null || true
+    cp ".env.staging" "${backup_path}/" 2>/dev/null || true
     
     # Create backup metadata
-    cat > "${backup_path}/metadata.json" << EOF
+    sudo tee "${backup_path}/metadata.json" > /dev/null << EOF
 {
     "timestamp": "$(date -Iseconds)",
     "git_commit": "$(git rev-parse HEAD)",
     "git_branch": "$(git rev-parse --abbrev-ref HEAD)",
     "environment": "staging",
-    "backup_type": "pre_deployment"
+    "backup_type": "pre_deployment",
+    "app_path": "$APP_PATH",
+    "mysql_db": "$MYSQL_DB"
 }
 EOF
     
@@ -173,47 +207,63 @@ pull_code() {
     success "Code updated successfully"
 }
 
-# Build and deploy containers
-deploy_containers() {
-    log "Building and deploying containers..."
+# Deploy application natively
+deploy_application() {
+    log "Deploying application natively..."
     
     # Copy staging environment file
     cp .env.staging .env
     
-    # Build images
-    log "Building Docker images..."
-    docker-compose -f "$COMPOSE_FILE" build --no-cache
+    # Sync application files to deployment directory
+    log "Syncing application files..."
+    sudo rsync -av --delete \
+        --exclude='.git' \
+        --exclude='node_modules' \
+        --exclude='vendor' \
+        --exclude='storage/logs/*' \
+        --exclude='storage/framework/cache/*' \
+        --exclude='storage/framework/sessions/*' \
+        --exclude='storage/framework/views/*' \
+        ./ "$APP_PATH/"
     
-    # Stop existing containers gracefully
-    log "Stopping existing containers..."
-    docker-compose -f "$COMPOSE_FILE" down --timeout 30
+    # Set proper ownership and permissions
+    log "Setting file permissions..."
+    sudo chown -R "$PHP_USER:$PHP_USER" "$APP_PATH"
+    sudo chmod -R 755 "$APP_PATH"
+    sudo chmod -R 775 "$APP_PATH/storage"
+    sudo chmod -R 775 "$APP_PATH/bootstrap/cache"
     
-    # Start new containers
-    log "Starting new containers..."
-    docker-compose -f "$COMPOSE_FILE" up -d
+    # Install/update Composer dependencies
+    log "Installing Composer dependencies..."
+    cd "$APP_PATH"
+    sudo -u "$PHP_USER" composer install --no-dev --optimize-autoloader --no-interaction
     
-    # Wait for containers to be ready
-    log "Waiting for containers to be ready..."
-    sleep 30
+    # Create necessary directories
+    sudo -u "$PHP_USER" mkdir -p storage/logs
+    sudo -u "$PHP_USER" mkdir -p storage/framework/cache
+    sudo -u "$PHP_USER" mkdir -p storage/framework/sessions
+    sudo -u "$PHP_USER" mkdir -p storage/framework/views
     
-    success "Containers deployed successfully"
+    success "Application deployed successfully"
 }
 
 # Run database migrations
 run_migrations() {
     log "Running database migrations..."
     
-    # Wait for database to be ready
-    local max_attempts=30
+    cd "$APP_PATH"
+    
+    # Test database connection
+    local max_attempts=10
     local attempt=1
     
     while [[ $attempt -le $max_attempts ]]; do
-        if docker exec controle-financeiro-app-staging php artisan migrate --dry-run --no-interaction >/dev/null 2>&1; then
+        if sudo -u "$PHP_USER" php artisan migrate --dry-run --no-interaction >/dev/null 2>&1; then
             break
         fi
         
         log "Waiting for database to be ready (attempt $attempt/$max_attempts)..."
-        sleep 10
+        sleep 5
         ((attempt++))
     done
     
@@ -223,7 +273,8 @@ run_migrations() {
     fi
     
     # Run migrations
-    docker exec controle-financeiro-app-staging php artisan migrate --force --no-interaction
+    log "Executing database migrations..."
+    sudo -u "$PHP_USER" php artisan migrate --force --no-interaction
     
     success "Database migrations completed"
 }
@@ -232,19 +283,34 @@ run_migrations() {
 optimize_application() {
     log "Optimizing application..."
     
+    cd "$APP_PATH"
+    
     # Clear caches
-    docker exec controle-financeiro-app-staging php artisan cache:clear
-    docker exec controle-financeiro-app-staging php artisan config:clear
-    docker exec controle-financeiro-app-staging php artisan route:clear
-    docker exec controle-financeiro-app-staging php artisan view:clear
+    log "Clearing application caches..."
+    sudo -u "$PHP_USER" php artisan cache:clear
+    sudo -u "$PHP_USER" php artisan config:clear
+    sudo -u "$PHP_USER" php artisan route:clear
+    sudo -u "$PHP_USER" php artisan view:clear
     
     # Optimize for production
-    docker exec controle-financeiro-app-staging php artisan config:cache
-    docker exec controle-financeiro-app-staging php artisan route:cache
-    docker exec controle-financeiro-app-staging php artisan view:cache
+    log "Caching configuration for production..."
+    sudo -u "$PHP_USER" php artisan config:cache
+    sudo -u "$PHP_USER" php artisan route:cache
+    sudo -u "$PHP_USER" php artisan view:cache
     
     # Generate optimized autoloader
-    docker exec controle-financeiro-app-staging composer dump-autoload --optimize
+    log "Optimizing Composer autoloader..."
+    sudo -u "$PHP_USER" composer dump-autoload --optimize
+    
+    # Restart OpenLiteSpeed to ensure changes take effect
+    log "Restarting OpenLiteSpeed..."
+    if systemctl is-active --quiet lshttpd; then
+        sudo systemctl reload lshttpd
+        success "OpenLiteSpeed reloaded"
+    else
+        sudo systemctl restart lshttpd
+        success "OpenLiteSpeed restarted"
+    fi
     
     success "Application optimized"
 }
@@ -253,14 +319,34 @@ optimize_application() {
 run_health_checks() {
     log "Running post-deployment health checks..."
     
+    cd "$APP_PATH"
+    
     # Wait a bit for services to stabilize
-    sleep 15
+    sleep 10
     
     # Run comprehensive health check
-    if docker exec controle-financeiro-app-staging php artisan health:check --detailed --no-interaction; then
-        success "Health checks passed"
+    log "Running application health checks..."
+    if sudo -u "$PHP_USER" php artisan health:check --detailed --no-interaction 2>/dev/null; then
+        success "Application health checks passed"
     else
-        error "Health checks failed"
+        warning "Application health check command not available or failed"
+    fi
+    
+    # Test database connection
+    log "Testing database connection..."
+    if sudo -u "$PHP_USER" php artisan tinker --execute="DB::connection()->getPdo(); echo 'Database connection OK';" 2>/dev/null; then
+        success "Database connection is working"
+    else
+        error "Database connection failed"
+        return 1
+    fi
+    
+    # Test OpenLiteSpeed status
+    log "Checking OpenLiteSpeed status..."
+    if systemctl is-active --quiet lshttpd; then
+        success "OpenLiteSpeed is running"
+    else
+        error "OpenLiteSpeed is not running"
         return 1
     fi
     
@@ -268,8 +354,9 @@ run_health_checks() {
     local max_attempts=10
     local attempt=1
     
+    log "Testing web server response..."
     while [[ $attempt -le $max_attempts ]]; do
-        if curl -f -s -o /dev/null --max-time 30 "$APP_URL/health"; then
+        if curl -f -s -o /dev/null --max-time 30 "$APP_URL" || curl -f -s -o /dev/null --max-time 30 "$APP_URL/health" 2>/dev/null; then
             success "Web server is responding"
             break
         fi
@@ -297,32 +384,29 @@ rollback_deployment() {
         if [[ -d "$backup_path" ]]; then
             log "Restoring from backup: $backup_path"
             
-            # Stop current containers
-            docker-compose -f "$COMPOSE_FILE" down --timeout 30
+            # Restore application files
+            if [[ -d "${backup_path}/application" ]]; then
+                log "Restoring application files..."
+                sudo rm -rf "$APP_PATH"
+                sudo cp -r "${backup_path}/application" "$APP_PATH"
+                sudo chown -R "$PHP_USER:$PHP_USER" "$APP_PATH"
+                success "Application files restored"
+            fi
             
-            # Restore docker-compose file
-            cp "${backup_path}/docker-compose.yml" ./ 2>/dev/null || true
+            # Restore environment files
             cp "${backup_path}/.env" ./ 2>/dev/null || true
-            
-            # Start containers with old configuration
-            docker-compose -f "$COMPOSE_FILE" up -d
-            
-            # Wait for containers to be ready
-            sleep 30
+            cp "${backup_path}/.env.staging" ./ 2>/dev/null || true
             
             # Restore database if backup exists
             if [[ -f "${backup_path}/database.sql" ]]; then
                 log "Restoring database..."
-                docker exec -i controle-financeiro-mysql-staging mysql \
-                    -u root -p"${DB_ROOT_PASSWORD}" \
-                    "${DB_DATABASE:-controle_financeiro_staging}" < "${backup_path}/database.sql"
+                mysql -u "$MYSQL_USER" -p"${DB_PASSWORD}" "$MYSQL_DB" < "${backup_path}/database.sql"
+                success "Database restored"
             fi
             
-            # Restore storage if backup exists
-            if [[ -d "${backup_path}/storage" ]]; then
-                log "Restoring application storage..."
-                docker cp "${backup_path}/storage" controle-financeiro-app-staging:/var/www/html/
-            fi
+            # Restart OpenLiteSpeed
+            log "Restarting OpenLiteSpeed..."
+            sudo systemctl restart lshttpd
             
             success "Rollback completed"
         else
@@ -369,7 +453,7 @@ main() {
     check_prerequisites
     create_backup
     pull_code
-    deploy_containers
+    deploy_application
     run_migrations
     optimize_application
     

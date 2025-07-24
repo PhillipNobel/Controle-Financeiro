@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Este documento define os requisitos para configurar adequadamente os ambientes do sistema de Controle Financeiro, estabelecendo uma estrutura clara para desenvolvimento local nativo e staging no VPS usando Docker.
+Este documento define os requisitos para configurar adequadamente os ambientes do sistema de Controle Financeiro, estabelecendo uma estrutura clara para desenvolvimento local nativo e staging no VPS também nativo (sem Docker), devido às limitações de hardware do VPS.
 
 ## Requirements
 
@@ -20,25 +20,25 @@ Este documento define os requisitos para configurar adequadamente os ambientes d
 6. WHEN o desenvolvedor precisa de ferramentas auxiliares THEN o sistema SHALL usar ferramentas nativas locais (MailHog nativo, Redis local opcional)
 7. WHEN o desenvolvedor faz debugging THEN o sistema SHALL usar Xdebug nativo configurado para IDEs locais
 8. WHEN o desenvolvedor inicia o projeto THEN o sistema SHALL NUNCA usar Docker para desenvolvimento local
-9. WHEN há arquivos Docker no projeto THEN o sistema SHALL garantir que são APENAS para staging, nunca para desenvolvimento local
-10. WHEN há docker-compose.local.yml ou scripts Docker para desenvolvimento THEN o sistema SHALL removê-los completamente do projeto
+9. WHEN há arquivos Docker no projeto THEN o sistema SHALL removê-los completamente pois não serão mais utilizados
+10. WHEN há docker-compose files ou scripts Docker THEN o sistema SHALL removê-los completamente do projeto
 
 ### Requirement 2
 
-**User Story:** Como desenvolvedor, eu quero configurar facilmente o ambiente de staging no VPS usando Docker exclusivamente, para que eu possa testar a aplicação em um ambiente otimizado e controlado.
+**User Story:** Como desenvolvedor, eu quero configurar facilmente o ambiente de staging no VPS usando configuração nativa idêntica ao desenvolvimento local, para que eu possa testar a aplicação em um ambiente controlado sem overhead de Docker devido às limitações de hardware do VPS.
 
 #### Acceptance Criteria
 
-1. WHEN o sistema é deployado no VPS THEN o sistema SHALL usar Docker exclusivamente para staging (NUNCA para desenvolvimento local)
-2. WHEN o Docker é executado no VPS THEN o sistema SHALL usar MySQL containerizado para performance de staging
+1. WHEN o sistema é deployado no VPS THEN o sistema SHALL usar configuração nativa idêntica ao desenvolvimento local
+2. WHEN o ambiente de staging é configurado THEN o sistema SHALL usar MySQL nativo instalado diretamente no VPS
 3. WHEN o ambiente de staging é configurado THEN o sistema SHALL ter logs detalhados habilitados e estruturados
-4. WHEN o sistema roda em staging THEN o sistema SHALL usar HTTPS com certificado válido (Let's Encrypt ou similar)
-5. WHEN o sistema roda em staging THEN o sistema SHALL usar configurações simplificadas de cache e sessões baseadas em arquivo
-6. WHEN o desenvolvedor faz deploy THEN o sistema SHALL usar Docker apenas para staging, NUNCA local
+4. WHEN o sistema roda em staging THEN o sistema SHALL usar HTTPS com certificado válido configurado no OpenLiteSpeed
+5. WHEN o sistema roda em staging THEN o sistema SHALL usar configurações de cache e sessões baseadas em arquivo
+6. WHEN o desenvolvedor faz deploy THEN o sistema SHALL usar apenas configurações nativas tanto local quanto staging
 7. WHEN o ambiente de staging é iniciado THEN o sistema SHALL ter health checks robustos para monitoramento
-8. WHEN há configurações Docker THEN o sistema SHALL garantir que são APENAS para staging, NUNCA desenvolvimento
-9. WHEN há docker-compose files THEN o sistema SHALL ter APENAS docker-compose.yml (staging)
-10. WHEN há arquivos docker-compose.local.yml THEN o sistema SHALL removê-los completamente pois desenvolvimento é 100% nativo
+8. WHEN há configurações Docker THEN o sistema SHALL removê-las completamente do projeto
+9. WHEN há docker-compose files THEN o sistema SHALL removê-los completamente do projeto
+10. WHEN há scripts Docker THEN o sistema SHALL removê-los completamente e substituir por scripts nativos
 
 ### Requirement 3
 
@@ -71,7 +71,7 @@ Este documento define os requisitos para configurar adequadamente os ambientes d
 
 1. WHEN está em desenvolvimento local THEN o sistema SHALL usar MySQL nativo instalado localmente
 2. WHEN o desenvolvedor executa testes THEN o sistema SHALL usar SQLite em memória para velocidade
-3. WHEN está em staging THEN o sistema SHALL usar MySQL via Docker com configurações de performance
+3. WHEN está em staging THEN o sistema SHALL usar MySQL nativo instalado diretamente no VPS
 4. IF houver migração entre ambientes THEN o sistema SHALL manter compatibilidade de dados
 
 ### Requirement 6

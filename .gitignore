@@ -47,14 +47,9 @@ storage/framework/views/*
 /backups/*.sql
 /backups/*.sql.gz
 
-# Docker volumes
-mysql_data/
-redis_data/
-
 # Sensitive files
 .env.local
 .env.*.local
-docker-compose.override.yml
 
 # IDE
 *.swp
