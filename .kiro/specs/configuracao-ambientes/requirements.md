@@ -30,10 +30,10 @@ Este documento define os requisitos para configurar adequadamente os ambientes d
 #### Acceptance Criteria
 
 1. WHEN o sistema é deployado no VPS THEN o sistema SHALL usar Docker exclusivamente para staging (NUNCA para desenvolvimento local)
-2. WHEN o Docker é executado no VPS THEN o sistema SHALL usar MySQL e Redis containerizados para performance de staging
+2. WHEN o Docker é executado no VPS THEN o sistema SHALL usar MySQL containerizado para performance de staging
 3. WHEN o ambiente de staging é configurado THEN o sistema SHALL ter logs detalhados habilitados e estruturados
 4. WHEN o sistema roda em staging THEN o sistema SHALL usar HTTPS com certificado válido (Let's Encrypt ou similar)
-5. IF houver problemas de recursos no VPS THEN o sistema SHALL permitir configuração simplificada sem Redis
+5. WHEN o sistema roda em staging THEN o sistema SHALL usar configurações simplificadas de cache e sessões baseadas em arquivo
 6. WHEN o desenvolvedor faz deploy THEN o sistema SHALL usar Docker apenas para staging, NUNCA local
 7. WHEN o ambiente de staging é iniciado THEN o sistema SHALL ter health checks robustos para monitoramento
 8. WHEN há configurações Docker THEN o sistema SHALL garantir que são APENAS para staging, NUNCA desenvolvimento

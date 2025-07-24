@@ -17,7 +17,7 @@ Este documento descreve o design da arquitetura de ambientes para o sistema de C
 │                      │
 │ • PHP 8.3+ Native    │ • PHP Docker
 │ • MySQL Native       │ • MySQL Docker
-│ • File Cache         │ • Redis Docker
+│ • File Cache         │ • File Cache
 │ • Local Files        │ • Docker Volumes
 │ • Debug ON           │ • Debug Limited
 │ • Hot Reload         │ • Optimized Build
@@ -43,7 +43,7 @@ graph TD
     B -->|staging| D[Staging Config]
     
     C --> F[MySQL Native + File Cache]
-    D --> G[MySQL Docker + Redis Docker]
+    D --> G[MySQL Docker + File Cache]
     
     F --> I[Local Development]
     G --> J[VPS Staging]
@@ -134,17 +134,16 @@ interface EnvironmentConfigInterface
 **Staging**:
 ```php
 'cache' => [
-    'default' => 'redis',
+    'default' => 'file',
     'stores' => [
-        'redis' => [
-            'driver' => 'redis',
-            'connection' => 'cache',
+        'file' => [
+            'driver' => 'file',
+            'path' => storage_path('framework/cache/data'),
         ]
     ]
 ],
 'session' => [
-    'driver' => 'redis',
-    'connection' => 'session',
+    'driver' => 'file',
 ]
 ```
 
@@ -171,7 +170,7 @@ interface EnvironmentConfigInterface
 
 **Staging Docker**:
 - Optimized MySQL setup
-- Redis for caching and sessions
+- File-based cache and sessions for simplicity
 - Nginx with SSL termination
 - Health checks and monitoring
 - Backup volumes
@@ -340,7 +339,7 @@ sequenceDiagram
 
 ### Staging
 - Optimized performance
-- Redis caching
+- File-based caching for simplicity
 - Optimized queries
 - Performance monitoring
 - CDN integration

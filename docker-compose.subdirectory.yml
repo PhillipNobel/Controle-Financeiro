@@ -23,19 +23,15 @@ services:
       - DB_DATABASE=${DB_DATABASE:-controle_financeiro_staging}
       - DB_USERNAME=${DB_USERNAME:-staging_user}
       - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=redis
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - CACHE_DRIVER=redis
-      - SESSION_DRIVER=redis
+      - CACHE_DRIVER=file
+      - SESSION_DRIVER=file
       - SESSION_PATH=${SUBDIRECTORY_PATH:-/Controle-Financeiro}
-      - QUEUE_CONNECTION=redis
+      - QUEUE_CONNECTION=database
       - LOG_CHANNEL=stack
       - LOG_LEVEL=info
       - LOG_STDERR_FORMATTER=Monolog\Formatter\JsonFormatter
     depends_on:
       mysql:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - controle-financeiro-network
@@ -117,32 +113,6 @@ services:
         max-file: "3"
         labels: "service=mysql,environment=subdirectory"
 
-  # Cache & Queue (Redis) - SUBDIRECTORY CONFIGURATION
-  redis:
-    image: redis:7-alpine
-    container_name: controle-financeiro-redis-subdirectory
-    restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
-      - redis_logs:/var/log/redis
-    ports:
-      - "6380:6379"  # Map to port 6380 to avoid conflicts
-    networks:
-      - controle-financeiro-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-        labels: "service=redis,environment=subdirectory"
-
   # Queue Worker - SUBDIRECTORY CONFIGURATION
   queue:
     build:
@@ -163,16 +133,12 @@ services:
       - DB_DATABASE=${DB_DATABASE:-controle_financeiro_staging}
       - DB_USERNAME=${DB_USERNAME:-staging_user}
       - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=redis
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - QUEUE_CONNECTION=redis
+      - QUEUE_CONNECTION=database
       - LOG_CHANNEL=stack
       - LOG_LEVEL=info
     command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600 --memory=512 --timeout=300
     depends_on:
       mysql:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - controle-financeiro-network
@@ -208,15 +174,11 @@ services:
       - DB_DATABASE=${DB_DATABASE:-controle_financeiro_staging}
       - DB_USERNAME=${DB_USERNAME:-staging_user}
       - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=redis
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - LOG_CHANNEL=stack
       - LOG_LEVEL=info
     command: sh -c "while true; do php artisan schedule:run --verbose; sleep 60; done"
     depends_on:
       mysql:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - controle-financeiro-network
@@ -235,8 +197,6 @@ services:
 volumes:
   mysql_data:
     driver: local
-  redis_data:
-    driver: local
   app_storage:
     driver: local
   app_cache:
@@ -244,8 +204,6 @@ volumes:
   app_logs:
     driver: local
   mysql_logs:
-    driver: local
-  redis_logs:
     driver: local
   nginx_logs:
     driver: local

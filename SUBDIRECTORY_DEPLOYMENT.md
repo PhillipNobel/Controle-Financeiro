@@ -49,9 +49,6 @@ DB_USERNAME=staging_user
 DB_PASSWORD=SuaSenhaSuperSegura123
 DB_ROOT_PASSWORD=SenhaRootSuperSegura456
 
-# Redis
-REDIS_PASSWORD=SenhaRedisSuperSegura789
-
 # Sessões (IMPORTANTE para subdiretório)
 SESSION_PATH=/Controle-Financeiro
 SESSION_DOMAIN=dev.nexxtecnologia.com.br
@@ -279,9 +276,9 @@ git pull origin main
    docker exec controle-financeiro-app-subdirectory php artisan config:show session
    ```
 
-2. **Verificar Redis:**
+2. **Verificar cache:**
    ```bash
-   docker exec controle-financeiro-redis-subdirectory redis-cli ping
+   docker exec controle-financeiro-app-subdirectory php artisan cache:clear
    ```
 
 ### Problema: Banco não conecta
@@ -302,7 +299,7 @@ git pull origin main
 - [ ] Repositório clonado
 - [ ] Arquivo `.env` configurado com variáveis corretas
 - [ ] `APP_KEY` gerada
-- [ ] Senhas de banco e Redis definidas
+- [ ] Senhas de banco definidas
 - [ ] Deploy executado com sucesso
 - [ ] Containers rodando (verificar com `docker ps`)
 - [ ] Health checks passando

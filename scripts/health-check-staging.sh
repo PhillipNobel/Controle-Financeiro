@@ -114,24 +114,16 @@ check_database() {
     fi
 }
 
-# Check Redis connectivity
-check_redis() {
-    log "Checking Redis connectivity..."
+# Check cache functionality
+check_cache() {
+    log "Checking cache functionality..."
     
-    # Check if Redis container is responding
-    if docker exec controle-financeiro-redis-staging redis-cli ping 2>/dev/null | grep -q "PONG"; then
-        success "Redis is responding to ping"
-    else
-        error "Redis is not responding to ping"
-        return 1
-    fi
-    
-    # Check Redis connection through application
-    if docker exec controle-financeiro-app-staging php artisan tinker --execute="Redis::ping(); echo 'Redis connection OK';" 2>/dev/null | grep -q "Redis connection OK"; then
-        success "Application can connect to Redis"
+    # Check if cache is working through application
+    if docker exec controle-financeiro-app-staging php artisan tinker --execute="Cache::put('test', 'value', 60); echo Cache::get('test');" 2>/dev/null | grep -q "value"; then
+        success "Application cache is working"
         return 0
     else
-        error "Application cannot connect to Redis"
+        error "Application cache is not working"
         return 1
     fi
 }
@@ -251,7 +243,7 @@ main() {
     check_container "controle-financeiro-app-staging" "Application" || overall_status=1
     check_container "controle-financeiro-nginx-staging" "Nginx" || overall_status=1
     check_container "controle-financeiro-mysql-staging" "MySQL" || overall_status=1
-    check_container "controle-financeiro-redis-staging" "Redis" || overall_status=1
+
     echo ""
     
     # Container health checks
@@ -259,14 +251,14 @@ main() {
     check_container_health "controle-financeiro-app-staging" "Application" || overall_status=1
     check_container_health "controle-financeiro-nginx-staging" "Nginx" || overall_status=1
     check_container_health "controle-financeiro-mysql-staging" "MySQL" || overall_status=1
-    check_container_health "controle-financeiro-redis-staging" "Redis" || overall_status=1
+
     echo ""
     
     # Service connectivity checks
     log "=== Service Connectivity ==="
     check_application_health || overall_status=1
     check_database || overall_status=1
-    check_redis || overall_status=1
+    check_cache || overall_status=1
     check_web_server || overall_status=1
     echo ""
     
