@@ -1,12 +1,16 @@
 #!/bin/bash
 
 # Native Staging Deployment Script
-# This script deploys the application to the staging environment using native PHP/MySQL/OpenLiteSpeed
+# This script deploys the application to the staging environment using native PHP/MySQL
 # No Docker dependencies - optimized for VPS with limited hardware resources
+# 
+# Usage: ./scripts/deploy-staging.sh [--auto-install]
+#
+# The --auto-install flag will automatically install missing dependencies
 
 set -e
 
-# Configuration
+# Configuration (can be overridden by environment variables)
 APP_URL="${APP_URL:-https://staging.controle-financeiro.com}"
 APP_PATH="${APP_PATH:-/var/www/html/controle-financeiro}"
 BACKUP_DIR="/var/backups/controle-financeiro"
@@ -14,6 +18,8 @@ LOG_FILE="/var/log/controle-financeiro-deploy.log"
 PHP_USER="${PHP_USER:-www-data}"
 MYSQL_USER="${MYSQL_USER:-staging_user}"
 MYSQL_DB="${MYSQL_DB:-controle_financeiro_staging}"
+MYSQL_PASSWORD="${MYSQL_PASSWORD:-}"
+AUTO_INSTALL="${AUTO_INSTALL:-false}"
 TIMEOUT=300
 
 # Colors for output
@@ -62,36 +68,134 @@ cleanup() {
 # Set trap for cleanup
 trap cleanup EXIT
 
+# Auto-install missing dependencies
+auto_install_dependencies() {
+    log "Auto-installing missing dependencies..."
+    
+    # Detect OS
+    if [[ -f /etc/debian_version ]]; then
+        OS="debian"
+        PKG_MANAGER="apt"
+    elif [[ -f /etc/redhat-release ]]; then
+        OS="redhat"
+        PKG_MANAGER="yum"
+    else
+        error "Unsupported operating system"
+        exit 1
+    fi
+    
+    log "Detected OS: $OS"
+    
+    # Update package manager
+    log "Updating package manager..."
+    if [[ $OS == "debian" ]]; then
+        sudo apt update
+    else
+        sudo yum update -y
+    fi
+    
+    # Install PHP if missing
+    if ! command -v php >/dev/null 2>&1; then
+        log "Installing PHP..."
+        if [[ $OS == "debian" ]]; then
+            sudo apt install -y php8.2 php8.2-fpm php8.2-mysql php8.2-xml php8.2-curl php8.2-zip php8.2-mbstring php8.2-gd php8.2-intl php8.2-bcmath
+        else
+            sudo yum install -y php82 php82-fpm php82-mysql php82-xml php82-curl php82-zip php82-mbstring php82-gd php82-intl php82-bcmath
+        fi
+    fi
+    
+    # Install MySQL if missing
+    if ! command -v mysql >/dev/null 2>&1; then
+        log "Installing MySQL..."
+        if [[ $OS == "debian" ]]; then
+            sudo apt install -y mysql-server mysql-client
+        else
+            sudo yum install -y mysql-server mysql
+        fi
+        sudo systemctl start mysql || sudo systemctl start mysqld
+        sudo systemctl enable mysql || sudo systemctl enable mysqld
+    fi
+    
+    # Install Composer if missing
+    if ! command -v composer >/dev/null 2>&1; then
+        log "Installing Composer..."
+        curl -sS https://getcomposer.org/installer | php
+        sudo mv composer.phar /usr/local/bin/composer
+        sudo chmod +x /usr/local/bin/composer
+    fi
+    
+    # Install Nginx if missing
+    if ! command -v nginx >/dev/null 2>&1; then
+        log "Installing Nginx..."
+        if [[ $OS == "debian" ]]; then
+            sudo apt install -y nginx
+        else
+            sudo yum install -y nginx
+        fi
+        sudo systemctl start nginx
+        sudo systemctl enable nginx
+    fi
+    
+    # Install Node.js if missing
+    if ! command -v node >/dev/null 2>&1; then
+        log "Installing Node.js..."
+        if [[ $OS == "debian" ]]; then
+            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            sudo apt install -y nodejs
+        else
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+            sudo yum install -y nodejs
+        fi
+    fi
+    
+    success "Dependencies installation completed"
+}
+
 # Check prerequisites
 check_prerequisites() {
     log "Checking native deployment prerequisites..."
     
-    # Check if PHP is available (should be pre-installed)
+    local missing_deps=()
+    
+    # Check if PHP is available
     if ! command -v php >/dev/null 2>&1; then
-        error "PHP is not installed or not in PATH"
-        exit 1
+        missing_deps+=("PHP")
+    else
+        local php_version=$(php -r "echo PHP_VERSION;")
+        log "PHP version: $php_version"
     fi
     
-    # Check PHP version
-    local php_version=$(php -r "echo PHP_VERSION;")
-    log "PHP version: $php_version"
-    
-    # Check if Composer is available (should be pre-installed)
+    # Check if Composer is available
     if ! command -v composer >/dev/null 2>&1; then
-        error "Composer is not installed or not in PATH"
-        exit 1
+        missing_deps+=("Composer")
     fi
     
-    # Check if MySQL is available (should be pre-installed)
+    # Check if MySQL is available
     if ! command -v mysql >/dev/null 2>&1; then
-        error "MySQL client is not installed or not in PATH"
-        exit 1
+        missing_deps+=("MySQL")
     fi
     
     # Check if git is available
     if ! command -v git >/dev/null 2>&1; then
-        error "git is not installed"
-        exit 1
+        missing_deps+=("Git")
+    fi
+    
+    # Check if Nginx is available
+    if ! command -v nginx >/dev/null 2>&1; then
+        missing_deps+=("Nginx")
+    fi
+    
+    # Handle missing dependencies
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        warning "Missing dependencies: ${missing_deps[*]}"
+        
+        if [[ $AUTO_INSTALL == "true" ]]; then
+            auto_install_dependencies
+        else
+            error "Missing dependencies. Run with --auto-install to install them automatically"
+            log "Or install manually: ${missing_deps[*]}"
+            exit 1
+        fi
     fi
     
     # Check if we're in the right directory
@@ -113,16 +217,14 @@ check_prerequisites() {
         sudo chown "$PHP_USER:$PHP_USER" "$APP_PATH"
     fi
     
-    # Check OpenLiteSpeed status
-    if command -v lshttpd >/dev/null 2>&1; then
-        log "OpenLiteSpeed detected"
-        if systemctl is-active --quiet lshttpd; then
-            success "OpenLiteSpeed is running"
-        else
-            warning "OpenLiteSpeed is not running"
-        fi
+    # Check web server status
+    if systemctl is-active --quiet nginx; then
+        success "Nginx is running"
     else
-        warning "OpenLiteSpeed not detected in PATH"
+        log "Starting Nginx..."
+        sudo systemctl start nginx
+        sudo systemctl enable nginx
+        success "Nginx started"
     fi
     
     success "Prerequisites check passed"
@@ -474,6 +576,10 @@ main() {
 
 # Handle command line arguments
 case "${1:-}" in
+    --auto-install)
+        AUTO_INSTALL="true"
+        log "Auto-install mode enabled"
+        ;;
     --dry-run)
         log "Dry run mode - no actual deployment will be performed"
         check_prerequisites
@@ -494,10 +600,18 @@ case "${1:-}" in
         echo "Usage: $0 [OPTIONS]"
         echo ""
         echo "Options:"
+        echo "  --auto-install Install missing dependencies automatically"
         echo "  --dry-run      Perform a dry run without actual deployment"
         echo "  --rollback     Rollback to the previous deployment"
         echo "  --health-check Run health checks only"
         echo "  --help         Show this help message"
+        echo ""
+        echo "Environment Variables:"
+        echo "  APP_URL        Application URL (default: https://staging.controle-financeiro.com)"
+        echo "  APP_PATH       Application path (default: /var/www/html/controle-financeiro)"
+        echo "  MYSQL_USER     MySQL user (default: staging_user)"
+        echo "  MYSQL_DB       MySQL database (default: controle_financeiro_staging)"
+        echo "  MYSQL_PASSWORD MySQL password (required)"
         echo ""
         exit 0
         ;;

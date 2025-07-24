@@ -70,24 +70,28 @@ php artisan serve
 
 📖 **Guia completo**: [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md)
 
-## 🚀 Staging (Nativo no VPS)
+## 🚀 Deploy no VPS (Setup Automático)
 
-### Staging no VPS
+### ⚡ Setup Super Rápido (2 comandos)
 
 ```bash
 # 1. Clone o repositório no VPS
 git clone https://github.com/PhillipNobel/Controle-Financeiro.git
 cd Controle-Financeiro
 
-# 2. Configure ambiente de staging
-cp .env.staging .env
-# Edite as variáveis necessárias
+# 2. Execute o setup automático
+./scripts/setup-vps.sh
+```
 
-# 3. Execute deploy para staging
-./scripts/deploy-staging.sh
+**Pronto!** 🎉 O script instala tudo automaticamente: PHP, MySQL, Nginx, SSL, e faz o deploy completo.
 
-# 4. Configure SSL nativo
-# Configure SSL diretamente no servidor web (Apache/Nginx)
+📖 **Guia detalhado**: [VPS_SETUP.md](VPS_SETUP.md)
+
+### Deploy Manual (Alternativo)
+
+```bash
+# Se preferir fazer manualmente
+./scripts/deploy-staging.sh --auto-install
 ```
 
 ### Usuários Padrão
