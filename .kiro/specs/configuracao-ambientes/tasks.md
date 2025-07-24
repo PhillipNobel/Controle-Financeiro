@@ -121,9 +121,7 @@
 
 - [ ] 6.3 Configurar servidor de desenvolvimento local nativo
   - Testar php artisan serve (porta 8000) sem Docker
-  - Configurar Laravel Herd como alternativa premium (se disponível)
   - Verificar hot reload instantâneo e file watching nativo
-  - Testar acesso à aplicação via localhost:8000 (nativo)
   - Verificar se todas as rotas funcionam no servidor nativo
   - Confirmar que não há containers rodando durante desenvolvimento
   - Testar performance de hot reload (deve ser instantâneo)
@@ -186,14 +184,7 @@
   - Testar comandos artisan essenciais
   - _Requirements: 1.1, 1.2, 1.3, 1.5_
 
-- [ ] 9.2 Testar deploy e configuração de staging
-  - Executar deploy completo para staging
-  - Validar funcionamento da aplicação em staging
-  - Testar processo de rollback
-  - Verificar logs e monitoramento
-  - _Requirements: 2.1, 2.2, 2.3, 2.4_
-
-- [ ] 9.3 Validar documentação e processos
+- [ ] 9.2 Validar documentação e processos
   - Revisar toda a documentação criada
   - Testar guias passo-a-passo
   - Validar scripts de deployment
