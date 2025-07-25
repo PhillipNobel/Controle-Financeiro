@@ -1,4 +1,4 @@
-# Laravel
+# Laravel Framework
 /node_modules
 /public/build
 /public/hot
@@ -6,34 +6,21 @@
 /storage/*.key
 /vendor
 .env
-.env.backup
-.env.production
+.env.*
+!.env.example
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml
 auth.json
 npm-debug.log
 yarn-error.log
-/.fleet
-/.idea
-/.vscode
 
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Logs
-*.log
-storage/logs/*.log
-
-# Cache
+# Laravel Specific
 bootstrap/cache/*
 !bootstrap/cache/.gitignore
+storage/app/*
+!storage/app/.gitignore
+!storage/app/public/
 storage/framework/cache/*
 !storage/framework/cache/.gitignore
 storage/framework/sessions/*
@@ -42,16 +29,134 @@ storage/framework/testing/*
 !storage/framework/testing/.gitignore
 storage/framework/views/*
 !storage/framework/views/.gitignore
+storage/logs/*
+!storage/logs/.gitignore
 
-# Backups
-/backups/*.sql
-/backups/*.sql.gz
-
-# Sensitive files
+# Security & Sensitive Files
 .env.local
 .env.*.local
+.env.backup
+.env.production
+.env.staging
+.env.testing
+*.key
+*.pem
+*.p12
+*.pfx
+/config/database.php.backup
+/config/app.php.backup
 
-# IDE
+# Database
+*.sqlite
+*.sqlite3
+*.db
+/database/*.sqlite
+/database/*.sqlite3
+/database/database.sqlite
+
+# Backups & Dumps
+/backups/
+*.sql
+*.sql.gz
+*.dump
+/storage/backups/
+/database/backups/
+
+# Uploads & User Content
+/public/uploads/
+/storage/app/uploads/
+/public/files/
+/storage/app/public/uploads/
+
+# IDE & Editors
+/.fleet
+/.idea
+/.vscode
 *.swp
 *.swo
-*~node_modules
+*~
+.project
+.buildpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+/logs/
+/storage/logs/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime & Temporary Files
+/tmp/
+/temp/
+*.tmp
+*.temp
+.cache/
+.sass-cache/
+
+# Package Managers
+node_modules/
+bower_components/
+/vendor/
+composer.phar
+package-lock.json
+yarn.lock
+
+# Testing
+/coverage/
+/.nyc_output
+/phpunit.xml
+/phpunit.xml.dist.backup
+.phpunit.result.cache
+
+# Build & Distribution
+/build/
+/dist/
+/public/mix-manifest.json
+/public/js/app.js
+/public/css/app.css
+
+# Docker
+/.docker/
+docker-compose.override.yml
+.dockerignore
+
+# Deployment
+/deploy/
+/.deployment
+/scripts/deploy.sh.local
+
+# Kiro IDE & Development Tools
+.kiro/
+/.kiro/
+/Users/phillipcesar/Desktop/Projects/.kiro/specs/
+/Users/phillipcesar/Desktop/Projects/.tra
+
+# Local Configuration
+/config/local/
+/config/*.local.php
+
+# Error & Debug Files
+error_log
+debug.log
+/storage/debugbar/
+
+# Miscellaneous
+*.bak
+*.orig
+*.rej
+*~
+.htaccess.backup
