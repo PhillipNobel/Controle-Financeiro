@@ -70,35 +70,24 @@ php artisan serve
 
 📖 **Guia completo**: [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md)
 
-## 🚀 Deploy no VPS (Setup Automático)
+## 🚀 Deploy no VPS com AAPanel
 
-### 🎛️ Para VPS com AAPanel (Recomendado)
+### ⚡ Setup em 2 comandos
 
 ```bash
-# 1. Clone o repositório no VPS
+# 1. Clone no VPS
 git clone https://github.com/PhillipNobel/Controle-Financeiro.git
 cd Controle-Financeiro
 
-# 2. Execute o setup para AAPanel
+# 2. Execute o setup
 ./scripts/setup-aapanel.sh
 ```
 
-**Pronto!** 🎉 Funciona com AAPanel que já tem PHP, MySQL e Nginx instalados.
+**Pronto!** 🎉 Funciona com AAPanel que já tem PHP, MySQL e web server.
 
-### ⚡ Para VPS Limpo (Sem AAPanel)
+Depois configure o site no painel do AAPanel.
 
-```bash
-# 1. Clone o repositório no VPS
-git clone https://github.com/PhillipNobel/Controle-Financeiro.git
-cd Controle-Financeiro
-
-# 2. Execute o setup completo
-./scripts/setup-vps.sh
-```
-
-**Pronto!** 🎉 O script instala tudo automaticamente: PHP, MySQL, Nginx, SSL, e faz o deploy completo.
-
-📖 **Guia detalhado**: [VPS_SETUP.md](VPS_SETUP.md)
+📖 **Guia completo**: [VPS_SETUP.md](VPS_SETUP.md)
 
 ### Usuários Padrão
 
