@@ -2,7 +2,9 @@
 
 Este guia mostra como fazer o deploy do projeto no VPS de forma **super simples** usando apenas **2 comandos**.
 
-## ⚡ Setup Automático (Recomendado)
+## 🎛️ Para VPS com AAPanel (Recomendado)
+
+Se você usa **AAPanel** no seu VPS (que já tem PHP, MySQL e Nginx instalados):
 
 ### 1. Clone o repositório no VPS
 ```bash
@@ -10,7 +12,35 @@ git clone https://github.com/PhillipNobel/Controle-Financeiro.git
 cd Controle-Financeiro
 ```
 
-### 2. Execute o script de setup
+### 2. Execute o script específico para AAPanel
+```bash
+./scripts/setup-aapanel.sh
+```
+
+**Pronto!** 🎉 O script vai:
+- ✅ Detectar o ambiente AAPanel
+- ✅ Instalar apenas dependências faltantes (Composer, Node.js)
+- ✅ Configurar o banco de dados MySQL
+- ✅ Fazer o deploy da aplicação
+- ✅ Executar todas as migrações
+- ✅ Otimizar a aplicação para produção
+
+### Após o script, você precisa:
+1. **Criar um site no AAPanel** apontando para `/www/wwwroot/seu-dominio.com/public`
+2. **Configurar SSL** no AAPanel para seu domínio
+3. **Definir PHP 8.2+** como versão do site no AAPanel
+
+## ⚡ Setup Automático (VPS Limpo)
+
+Se você tem um VPS limpo sem AAPanel:
+
+### 1. Clone o repositório no VPS
+```bash
+git clone https://github.com/PhillipNobel/Controle-Financeiro.git
+cd Controle-Financeiro
+```
+
+### 2. Execute o script de setup completo
 ```bash
 ./scripts/setup-vps.sh
 ```
