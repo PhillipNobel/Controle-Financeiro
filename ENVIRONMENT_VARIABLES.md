@@ -316,13 +316,13 @@ LOG_SLACK_WEBHOOK_URL=your-slack-webhook
 4. **Cache Issues**: Clear cache with `php artisan cache:clear`
 5. **Session Issues**: Clear sessions with `php artisan session:flush`
 
-### Environment Detection
-The application uses `EnvironmentDetector` service to automatically detect the environment based on:
-1. `APP_ENV` variable
-2. Hostname patterns
-3. Fallback to production settings for security
+### Environment Configuration
+The application uses standard Laravel environment configuration:
+1. Set `APP_ENV` variable in your `.env` file
+2. Configure database settings in `config/database.php`
+3. Use appropriate `.env` files for each environment
 
 ### Performance Optimization
-- **Local**: Optimized for development speed
-- **Staging**: Balanced for testing and debugging
-- **Production**: Optimized for performance and security
+- **Local**: Use appropriate database settings for development
+- **Staging**: Configure for testing environment needs
+- **Production**: Optimize database and cache settings for performance
