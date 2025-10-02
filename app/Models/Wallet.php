@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Wallet extends Model
 {
@@ -18,6 +19,16 @@ class Wallet extends Model
     protected $fillable = [
         'name',
         'description',
+        'budget',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'budget' => 'decimal:2',
     ];
 
     /**
@@ -34,5 +45,15 @@ class Wallet extends Model
     public function getTotalValue(): float
     {
         return $this->transactions()->sum('value') ?? 0.0;
+    }
+
+    /**
+     * Get the remaining budget for this wallet.
+     */
+    protected function remainingBudget(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->budget - $this->getTotalValue(),
+        );
     }
 }

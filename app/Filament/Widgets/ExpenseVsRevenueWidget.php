@@ -27,8 +27,8 @@ class ExpenseVsRevenueWidget extends ChartWidget
         $transactions = Transaction::whereBetween('date', [$period['start'], $period['end']])
             ->get();
 
-        $revenues = (float) $transactions->where('value', '>', 0)->sum('value');
-        $expenses = (float) abs($transactions->where('value', '<', 0)->sum('value'));
+        $revenues = (float) $transactions->where('type', 'income')->sum('value');
+        $expenses = (float) $transactions->where('type', 'expense')->sum('value');
 
         return [
             'datasets' => [

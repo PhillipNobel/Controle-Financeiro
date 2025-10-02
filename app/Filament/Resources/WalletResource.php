@@ -33,15 +33,17 @@ class WalletResource extends Resource
                 Forms\Components\TextInput::make('name')
                     ->label('Nome')
                     ->required()
-                    ->maxLength(255)
-                    ->unique(ignoreRecord: true)
-                    ->placeholder('Nome da carteira'),
-                    
-                Forms\Components\Textarea::make('description')
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('description')
                     ->label('Descrição')
-                    ->maxLength(500)
-                    ->placeholder('Descrição opcional da carteira')
-                    ->columnSpanFull(),
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('budget')
+                    ->label('Orçamento')
+                    ->prefix('R$')
+                    ->mask('999.999.999.999,99')
+                    ->numeric()
+                    ->default(0.00)
+                    ->helperText('Defina um orçamento para esta carteira (opcional)'),
             ]);
     }
 
@@ -51,40 +53,31 @@ class WalletResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nome')
-                    ->searchable()
-                    ->sortable(),
-                    
-                /*Tables\Columns\TextColumn::make('description')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('description')
                     ->label('Descrição')
-                    ->limit(50)
-                    ->tooltip(function (Tables\Columns\TextColumn $column): ?string {
-                        $state = $column->getState();
-                        if (strlen($state) <= 50) {
-                            return null;
-                        }
-                        return $state;
-                    }),*/
-                    
-                Tables\Columns\TextColumn::make('transactions_count')
-                    ->label('Transações')
-                    ->counts('transactions')
-                    ->sortable(),
-                    
-                Tables\Columns\TextColumn::make('total_value')
-                    ->label('Total')
-                    ->getStateUsing(fn (Wallet $record): float => $record->getTotalValue())
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('budget')
+                    ->label('Orçamento')
                     ->money('BRL')
                     ->sortable(),
-                    
+                Tables\Columns\TextColumn::make('remaining_budget')
+                    ->label('Orçamento Restante')
+                    ->money('BRL')
+                    ->sortable()
+                    ->color(fn (string $state): string => match (true) {
+                        $state < 0 => 'danger',
+                        $state > 0 => 'success',
+                        default => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
-                    ->dateTime('d/m/Y H:i')
+                    ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                    
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Atualizado em')
-                    ->dateTime('d/m/Y H:i')
+                    ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -92,41 +85,13 @@ class WalletResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
-                    ->before(function (Tables\Actions\DeleteAction $action, Wallet $record) {
-                        if ($record->transactions()->count() > 0) {
-                            Notification::make()
-                                ->title('Não é possível excluir')
-                                ->body('Esta carteira possui transações associadas e não pode ser excluída.')
-                                ->danger()
-                                ->send();
-                            
-                            $action->cancel();
-                        }
-                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->before(function (Tables\Actions\DeleteBulkAction $action, $records) {
-                            foreach ($records as $record) {
-                                if ($record->transactions()->count() > 0) {
-                                    Notification::make()
-                                        ->title('Não é possível excluir')
-                                        ->body('Uma ou mais carteiras possuem transações associadas e não podem ser excluídas.')
-                                        ->danger()
-                                        ->send();
-                                    
-                                    $action->cancel();
-                                    return;
-                                }
-                            }
-                        }),
+                    Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ])
-            ->defaultSort('name');
+            ]);
     }
 
     public static function getRelations(): array

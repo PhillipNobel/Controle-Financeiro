@@ -2,20 +2,19 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\TransactionType;
 use App\Filament\Resources\TransactionResource\Pages;
 use App\Filament\Resources\TransactionResource\RelationManagers;
 use App\Models\Transaction;
-use App\Models\Wallet;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Carbon\Carbon;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
 
 class TransactionResource extends Resource
 {
@@ -36,48 +35,34 @@ class TransactionResource extends Resource
                 Forms\Components\TextInput::make('item')
                     ->label('Item')
                     ->required()
-                    ->maxLength(255)
-                    ->placeholder('Descrição do item'),
+                    ->maxLength(255),
                     
                 Forms\Components\DatePicker::make('date')
                     ->label('Data')
                     ->required()
-                    ->default(now())
-                    ->displayFormat('d/m/Y')
-                    ->format('Y-m-d'),
+                    ->default(now()),
                     
-                Forms\Components\TextInput::make('quantity')
-                    ->label('Quantidade')
-                    ->required()
-                    ->numeric()
-                    ->minValue(0)
-                    ->step(0.01)
-                    ->default(1)
-                    ->placeholder('0,00'),
+                Forms\Components\Select::make('type')
+                    ->label('Tipo')
+                    ->options([
+                        TransactionType::EXPENSE->value => 'Despesa',
+                        TransactionType::INCOME->value => 'Receita',
+                    ])
+                    ->default(TransactionType::EXPENSE->value)
+                    ->required(),
                     
                 Forms\Components\TextInput::make('value')
                     ->label('Valor')
-                    ->required()
                     ->numeric()
-                    ->step(0.01)
-                    ->prefix('R$')
-                    ->placeholder('0,00'),
+                    ->required()
+                    ->prefix('R$'),
                     
                 Forms\Components\Select::make('wallet_id')
                     ->label('Carteira')
                     ->relationship('wallet', 'name')
                     ->required()
                     ->searchable()
-                    ->preload()
-                    ->createOptionForm([
-                        Forms\Components\TextInput::make('name')
-                            ->label('Nome')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\Textarea::make('description')
-                            ->label('Descrição')
-                            ->maxLength(500),
-                    ]),
+                    ->preload(),
             ]);
     }
 
@@ -95,14 +80,19 @@ class TransactionResource extends Resource
                     ->date('d/m/Y')
                     ->sortable(),
                     
-                Tables\Columns\TextColumn::make('quantity')
-                    ->label('Quantidade')
-                    ->numeric(decimalPlaces: 2)
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('type')
+                    ->label('Tipo')
+                    ->badge()
+                    ->formatStateUsing(fn (TransactionType $state): string => $state->getLabel())
+                    ->color(fn (TransactionType $state): string => $state->getColor()),
                     
                 Tables\Columns\TextColumn::make('value')
                     ->label('Valor')
                     ->money('BRL')
+                    ->color(fn (Transaction $record): string => match ($record->type) {
+                        TransactionType::INCOME => 'success',
+                        TransactionType::EXPENSE => 'danger',
+                    })
                     ->sortable(),
                     
                 Tables\Columns\TextColumn::make('wallet.name')
@@ -128,6 +118,13 @@ class TransactionResource extends Resource
                     ->relationship('wallet', 'name')
                     ->searchable()
                     ->preload(),
+                    
+                SelectFilter::make('type')
+                    ->label('Tipo')
+                    ->options([
+                        TransactionType::EXPENSE->value => 'Despesa',
+                        TransactionType::INCOME->value => 'Receita',
+                    ]),
                     
                 Filter::make('date_range')
                     ->label('Período')

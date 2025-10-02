@@ -21,8 +21,8 @@ class MostExpensiveWidget extends BaseWidget
         return $table
             ->query(
                 Transaction::query()
-                    ->where('value', '<', 0)
-                    ->orderBy('value', 'asc')
+                    ->where('type', 'expense')
+                    ->orderBy('value', 'desc')
                     ->limit(10)
             )
             ->columns([

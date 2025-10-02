@@ -31,12 +31,12 @@ class FinancialSummaryWidget extends BaseWidget
             $previousMonth->endOfMonth()->copy()
         ])->get();
         
-        $currentRevenues = $currentTransactions->where('value', '>', 0)->sum('value');
-        $currentExpenses = abs($currentTransactions->where('value', '<', 0)->sum('value'));
+        $currentRevenues = $currentTransactions->where('type', 'income')->sum('value');
+        $currentExpenses = $currentTransactions->where('type', 'expense')->sum('value');
         $currentBalance = $currentRevenues - $currentExpenses;
         
-        $previousRevenues = $previousTransactions->where('value', '>', 0)->sum('value');
-        $previousExpenses = abs($previousTransactions->where('value', '<', 0)->sum('value'));
+        $previousRevenues = $previousTransactions->where('type', 'income')->sum('value');
+        $previousExpenses = $previousTransactions->where('type', 'expense')->sum('value');
         $previousBalance = $previousRevenues - $previousExpenses;
         
         // Calculate percentage changes
