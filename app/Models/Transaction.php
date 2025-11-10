@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TransactionType;
 use App\Enums\ExpenseType;
+use App\Enums\RecurringType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,6 +25,9 @@ class Transaction extends Model
         'value',
         'type',
         'expense_type',
+        'is_recurring',
+        'recurring_type',
+        'recurring_end_date',
         'wallet_id',
     ];
 
@@ -40,6 +44,9 @@ class Transaction extends Model
             'value' => 'decimal:2',
             'type' => TransactionType::class,
             'expense_type' => ExpenseType::class,
+            'is_recurring' => 'boolean',
+            'recurring_type' => RecurringType::class,
+            'recurring_end_date' => 'date',
         ];
     }
 

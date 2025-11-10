@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\TransactionType;
 use App\Enums\ExpenseType;
+use App\Enums\RecurringType;
 use App\Filament\Resources\TransactionResource\Pages;
 use App\Filament\Resources\TransactionResource\RelationManagers;
 use App\Models\Transaction;
@@ -69,6 +70,26 @@ class TransactionResource extends Resource
                     ->required()
                     ->prefix('R$'),
                     
+                Forms\Components\Toggle::make('is_recurring')
+                    ->label('Transação Recorrente?')
+                    ->live()
+                    ->default(false),
+                    
+                Forms\Components\Select::make('recurring_type')
+                    ->label('Tipo de Recorrência')
+                    ->options([
+                        RecurringType::WEEKLY->value => 'Semanal',
+                        RecurringType::MONTHLY->value => 'Mensal',
+                        RecurringType::YEARLY->value => 'Anual',
+                    ])
+                    ->visible(fn (Forms\Get $get) => $get('is_recurring') === true)
+                    ->required(fn (Forms\Get $get) => $get('is_recurring') === true),
+                    
+                Forms\Components\DatePicker::make('recurring_end_date')
+                    ->label('Data Final da Recorrência')
+                    ->visible(fn (Forms\Get $get) => $get('is_recurring') === true)
+                    ->required(fn (Forms\Get $get) => $get('is_recurring') === true),
+                    
                 Forms\Components\Select::make('wallet_id')
                     ->label('Carteira')
                     ->relationship('wallet', 'name')
@@ -104,6 +125,21 @@ class TransactionResource extends Resource
                     ->formatStateUsing(fn (?ExpenseType $state): ?string => $state?->getLabel())
                     ->color(fn (?ExpenseType $state): ?string => $state?->getColor())
                     ->visible(fn (?Transaction $record): bool => $record?->type === TransactionType::EXPENSE),
+                    
+                Tables\Columns\IconColumn::make('is_recurring')
+                    ->label('Recorrente')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-arrow-path')
+                    ->falseIcon('heroicon-o-x-mark')
+                    ->trueColor('success')
+                    ->falseColor('gray'),
+                    
+                Tables\Columns\TextColumn::make('recurring_type')
+                    ->label('Recorrência')
+                    ->badge()
+                    ->formatStateUsing(fn (?RecurringType $state): ?string => $state?->getLabel())
+                    ->color(fn (?RecurringType $state): ?string => $state?->getColor())
+                    ->visible(fn (?Transaction $record): bool => $record?->is_recurring === true),
                     
                 Tables\Columns\TextColumn::make('value')
                     ->label('Valor')
@@ -152,6 +188,13 @@ class TransactionResource extends Resource
                         ExpenseType::VARIABLE->value => 'Variável',
                     ])
                     ->visible(fn (Builder $query): bool => true),
+                    
+                SelectFilter::make('is_recurring')
+                    ->label('Transação Recorrente')
+                    ->options([
+                        '1' => 'Sim',
+                        '0' => 'Não',
+                    ]),
                     
                 Filter::make('date_range')
                     ->label('Período')
