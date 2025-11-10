@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Notifications\Notification;
+use Leandrocfe\FilamentPtbrFormFields\Money;
 
 class WalletResource extends Resource
 {
@@ -37,12 +38,9 @@ class WalletResource extends Resource
                 Forms\Components\TextInput::make('description')
                     ->label('Descrição')
                     ->maxLength(255),
-                Forms\Components\TextInput::make('budget')
+                Money::make('budget')
                     ->label('Orçamento')
-                    ->prefix('R$')
-                    ->mask('999.999.999.999,99')
-                    ->numeric()
-                    ->default(0.00)
+                    ->default('0,00')
                     ->helperText('Defina um orçamento para esta carteira (opcional)'),
             ]);
     }
