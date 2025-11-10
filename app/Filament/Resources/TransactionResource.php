@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
+use Leandrocfe\FilamentPtbrFormFields\Money;
 
 class TransactionResource extends Resource
 {
@@ -64,11 +65,9 @@ class TransactionResource extends Resource
                     ->visible(fn (Forms\Get $get) => $get('type') === TransactionType::EXPENSE->value)
                     ->required(fn (Forms\Get $get) => $get('type') === TransactionType::EXPENSE->value),
                     
-                Forms\Components\TextInput::make('value')
+                Money::make('value')
                     ->label('Valor')
-                    ->numeric()
-                    ->required()
-                    ->prefix('R$'),
+                    ->required(),
                     
                 Forms\Components\Toggle::make('is_recurring')
                     ->label('Transação Recorrente?')
