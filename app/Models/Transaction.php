@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TransactionType;
+use App\Enums\ExpenseType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,6 +23,7 @@ class Transaction extends Model
         'quantity',
         'value',
         'type',
+        'expense_type',
         'wallet_id',
     ];
 
@@ -37,6 +39,7 @@ class Transaction extends Model
             'quantity' => 'decimal:2',
             'value' => 'decimal:2',
             'type' => TransactionType::class,
+            'expense_type' => ExpenseType::class,
         ];
     }
 

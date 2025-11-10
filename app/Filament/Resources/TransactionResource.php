@@ -3,11 +3,13 @@
 namespace App\Filament\Resources;
 
 use App\Enums\TransactionType;
+use App\Enums\ExpenseType;
 use App\Filament\Resources\TransactionResource\Pages;
 use App\Filament\Resources\TransactionResource\RelationManagers;
 use App\Models\Transaction;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -49,7 +51,17 @@ class TransactionResource extends Resource
                         TransactionType::INCOME->value => 'Receita',
                     ])
                     ->default(TransactionType::EXPENSE->value)
-                    ->required(),
+                    ->required()
+                    ->live(),
+                    
+                Forms\Components\Select::make('expense_type')
+                    ->label('Tipo de Despesa')
+                    ->options([
+                        ExpenseType::FIXED->value => 'Fixa',
+                        ExpenseType::VARIABLE->value => 'Variável',
+                    ])
+                    ->visible(fn (Forms\Get $get) => $get('type') === TransactionType::EXPENSE->value)
+                    ->required(fn (Forms\Get $get) => $get('type') === TransactionType::EXPENSE->value),
                     
                 Forms\Components\TextInput::make('value')
                     ->label('Valor')
@@ -85,6 +97,13 @@ class TransactionResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn (TransactionType $state): string => $state->getLabel())
                     ->color(fn (TransactionType $state): string => $state->getColor()),
+                    
+                Tables\Columns\TextColumn::make('expense_type')
+                    ->label('Tipo de Despesa')
+                    ->badge()
+                    ->formatStateUsing(fn (?ExpenseType $state): ?string => $state?->getLabel())
+                    ->color(fn (?ExpenseType $state): ?string => $state?->getColor())
+                    ->visible(fn (?Transaction $record): bool => $record?->type === TransactionType::EXPENSE),
                     
                 Tables\Columns\TextColumn::make('value')
                     ->label('Valor')
@@ -125,6 +144,14 @@ class TransactionResource extends Resource
                         TransactionType::EXPENSE->value => 'Despesa',
                         TransactionType::INCOME->value => 'Receita',
                     ]),
+                    
+                SelectFilter::make('expense_type')
+                    ->label('Tipo de Despesa')
+                    ->options([
+                        ExpenseType::FIXED->value => 'Fixa',
+                        ExpenseType::VARIABLE->value => 'Variável',
+                    ])
+                    ->visible(fn (Builder $query): bool => true),
                     
                 Filter::make('date_range')
                     ->label('Período')
