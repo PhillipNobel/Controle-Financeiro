@@ -108,9 +108,19 @@ class TransactionResource extends Resource
                     ->sortable(),
                     
                 Tables\Columns\TextColumn::make('date')
-                    ->label('Data')
+                    ->label('Data da Transação')
                     ->date('d/m/Y')
                     ->sortable(),
+                    
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Criado em')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable(),
+                    
+                Tables\Columns\TextColumn::make('recurring_end_date')
+                    ->label('Final da Recorrência')
+                    ->date('d/m/Y')
+                    ->visible(fn (?Transaction $record): bool => $record?->is_recurring === true),
                     
                 Tables\Columns\TextColumn::make('type')
                     ->label('Tipo')
@@ -124,14 +134,6 @@ class TransactionResource extends Resource
                     ->formatStateUsing(fn (?ExpenseType $state): ?string => $state?->getLabel())
                     ->color(fn (?ExpenseType $state): ?string => $state?->getColor())
                     ->visible(fn (?Transaction $record): bool => $record?->type === TransactionType::EXPENSE),
-                    
-                Tables\Columns\IconColumn::make('is_recurring')
-                    ->label('Recorrente')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-arrow-path')
-                    ->falseIcon('heroicon-o-x-mark')
-                    ->trueColor('success')
-                    ->falseColor('gray'),
                     
                 Tables\Columns\TextColumn::make('recurring_type')
                     ->label('Recorrência')
@@ -153,12 +155,6 @@ class TransactionResource extends Resource
                     ->label('Carteira')
                     ->sortable()
                     ->searchable(),
-                    
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Criado em')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
                     
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Atualizado em')
@@ -212,6 +208,43 @@ class TransactionResource extends Resource
                             ->when(
                                 $data['date_to'],
                                 fn (Builder $query, $date): Builder => $query->whereDate('date', '<=', $date),
+                            );
+                    }),
+                    
+                Filter::make('month')
+                    ->label('Mês')
+                    ->form([
+                        Forms\Components\Select::make('month')
+                            ->label('Mês')
+                            ->options([
+                                '01' => 'Janeiro',
+                                '02' => 'Fevereiro', 
+                                '03' => 'Março',
+                                '04' => 'Abril',
+                                '05' => 'Maio',
+                                '06' => 'Junho',
+                                '07' => 'Julho',
+                                '08' => 'Agosto',
+                                '09' => 'Setembro',
+                                '10' => 'Outubro',
+                                '11' => 'Novembro',
+                                '12' => 'Dezembro',
+                            ])
+                            ->default(now()->format('m')),
+                        Forms\Components\Select::make('year')
+                            ->label('Ano')
+                            ->options(fn () => array_combine(
+                                $years = range(now()->year - 5, now()->year + 5),
+                                $years
+                            ))
+                            ->default(now()->format('Y')),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['month'] && $data['year'],
+                                fn (Builder $query): Builder => $query->whereMonth('date', $data['month'])
+                                    ->whereYear('date', $data['year'])
                             );
                     }),
             ])
