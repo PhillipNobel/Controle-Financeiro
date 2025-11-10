@@ -89,7 +89,12 @@ class WalletResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->contentFooter(
+                view('filament.tables.footer-total', [
+                    'total' => \App\Models\Wallet::sum('budget'),
+                ])
+            );
     }
 
     public static function getRelations(): array
