@@ -8,6 +8,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Support\Carbon;
+use App\Enums\PaymentMethod;
 
 class MostExpensiveWidget extends BaseWidget
 {
@@ -51,14 +52,28 @@ class MostExpensiveWidget extends BaseWidget
                     ->money('BRL')
                     ->color('danger')
                     ->sortable(),
+                    
+                Tables\Columns\TextColumn::make('payment_method')
+                    ->label('Método de Pagamento')
+                    ->badge()
+                    ->formatStateUsing(function ($state): string {
+                        if (is_string($state)) {
+                            return PaymentMethod::tryFrom($state)?->getLabel() ?? $state;
+                        }
+                        return $state->getLabel();
+                    })
+                    ->color(function ($state): string {
+                        $value = is_string($state) ? $state : $state->value;
+                        return match ($value) {
+                            PaymentMethod::DEBIT->value => 'primary',
+                            PaymentMethod::CREDIT_CARD->value => 'warning',
+                            PaymentMethod::PIX->value => 'success',
+                            PaymentMethod::BANK_SLIP->value => 'info',
+                            default => 'gray',
+                        };
+                    }),
             ])
-            ->actions([
-                Tables\Actions\Action::make('edit')
-                    ->label('Editar')
-                    ->icon('heroicon-m-pencil-square')
-                    ->url(fn (Transaction $record): string => TransactionResource::getUrl('edit', ['record' => $record]))
-                    ->openUrlInNewTab(false),
-            ])
+
             ->paginated(false)
             ->defaultSort('value', 'asc');
     }

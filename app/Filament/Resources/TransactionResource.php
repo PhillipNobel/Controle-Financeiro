@@ -186,12 +186,6 @@ class TransactionResource extends Resource
                     ->label('Carteira')
                     ->sortable()
                     ->searchable(),
-                    
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Atualizado em')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('wallet_id')
@@ -289,7 +283,6 @@ class TransactionResource extends Resource
                     }),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
