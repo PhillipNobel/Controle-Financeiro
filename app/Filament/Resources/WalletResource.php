@@ -60,7 +60,7 @@ class WalletResource extends Resource
                     ->money('BRL')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('remaining_budget')
-                    ->label('Orçamento Restante')
+                    ->label('Orçamento Restante do Mês')
                     ->money('BRL')
                     ->sortable()
                     ->color(fn (string $state): string => match (true) {

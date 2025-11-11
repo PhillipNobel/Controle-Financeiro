@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Enums\TransactionType;
 use App\Enums\ExpenseType;
 use App\Enums\RecurringType;
+use App\Enums\StatusTransaction;
 use App\Filament\Resources\TransactionResource\Pages;
 use App\Filament\Resources\TransactionResource\RelationManagers;
 use App\Models\Transaction;
@@ -80,6 +81,12 @@ class TransactionResource extends Resource
                     ->default(\App\Enums\PaymentMethod::DEBIT->value)
                     ->nullable(),
                     
+                Forms\Components\Select::make('status')
+                    ->label('Status')
+                    ->options(StatusTransaction::options())
+                    ->default(StatusTransaction::PENDING->value)
+                    ->required(),
+                    
                 Forms\Components\Toggle::make('is_recurring')
                     ->label('Transação Recorrente?')
                     ->live()
@@ -146,6 +153,12 @@ class TransactionResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn (?\App\Enums\PaymentMethod $state): ?string => $state?->getLabel())
                     ->color(fn (?\App\Enums\PaymentMethod $state): ?string => $state?->getColor()),
+                    
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn (\App\Enums\StatusTransaction $state): string => $state->getLabel())
+                    ->color(fn (\App\Enums\StatusTransaction $state): string => $state->getColor()),
                     
                 Tables\Columns\TextColumn::make('recurring_type')
                     ->label('Recorrência')

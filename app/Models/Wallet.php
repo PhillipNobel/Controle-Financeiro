@@ -48,12 +48,57 @@ class Wallet extends Model
     }
 
     /**
+     * Get the total value of open transactions (PENDING and OVERDUE) in this wallet.
+     */
+    public function getOpenTransactionsValue(): float
+    {
+        return $this->transactions()
+            ->whereIn('status', [\App\Enums\StatusTransaction::PENDING->value, \App\Enums\StatusTransaction::OVERDUE->value])
+            ->sum('value') ?? 0.0;
+    }
+
+    /**
+     * Get the total value of open transactions (PENDING and OVERDUE) for the current month.
+     */
+    public function getOpenTransactionsValueForCurrentMonth(): float
+    {
+        $now = now();
+        return $this->transactions()
+            ->whereIn('status', [\App\Enums\StatusTransaction::PENDING->value, \App\Enums\StatusTransaction::OVERDUE->value])
+            ->whereYear('date', $now->year)
+            ->whereMonth('date', $now->month)
+            ->sum('value') ?? 0.0;
+    }
+
+    /**
+     * Get the total value of open transactions (PENDING and OVERDUE) for a specific month.
+     */
+    public function getOpenTransactionsValueForMonth(int $year, int $month): float
+    {
+        return $this->transactions()
+            ->whereIn('status', [\App\Enums\StatusTransaction::PENDING->value, \App\Enums\StatusTransaction::OVERDUE->value])
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->sum('value') ?? 0.0;
+    }
+
+    /**
+     * Get the total value of paid transactions in this wallet.
+     */
+    public function getPaidTransactionsValue(): float
+    {
+        return $this->transactions()
+            ->where('status', \App\Enums\StatusTransaction::PAID->value)
+            ->sum('value') ?? 0.0;
+    }
+
+    /**
      * Get the remaining budget for this wallet.
      */
     protected function remainingBudget(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->budget - $this->getTotalValue(),
+            get: fn () => $this->budget - $this->getOpenTransactionsValueForCurrentMonth(),
         );
     }
 }
