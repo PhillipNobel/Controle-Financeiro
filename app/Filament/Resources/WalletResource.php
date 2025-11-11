@@ -10,6 +10,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\Summarizers\Summarizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Notifications\Notification;
@@ -59,7 +60,11 @@ class WalletResource extends Resource
                 Tables\Columns\TextColumn::make('budget')
                     ->label('Orçamento')
                     ->money('BRL')
-                    ->sortable(),
+                    ->sortable()
+                    ->summarize([
+                        Tables\Columns\Summarizers\Sum::make()
+                            ->label('Total Orçamento')
+                    ]),
                 Tables\Columns\TextColumn::make('remaining_budget')
                     ->label('Orçamento Restante')
                     ->money('BRL')
@@ -69,12 +74,33 @@ class WalletResource extends Resource
                         $state > 0 => 'success',
                         default => 'gray',
                     })
-                    ->getStateUsing(function (Wallet $record) {
-                        $month = request()->input('tableFilters.month_filter.month', now()->month);
-                        $year = request()->input('tableFilters.month_filter.year', now()->year);
+                    ->getStateUsing(function (Wallet $record, $livewire) {
+                        $month = $livewire->tableFilters['month_filter']['month'] ?? now()->month;
+                        $year = $livewire->tableFilters['month_filter']['year'] ?? now()->year;
                         
                         return $record->getRemainingBudgetForMonth((int) $year, (int) $month);
-                    }),
+                    })
+                    ->summarize([
+                        Summarizer::make()
+                            ->label('Total Orçamento Restante')
+                            ->using(function (\Illuminate\Database\Query\Builder $query, $livewire) {
+                                $month = $livewire->tableFilters['month_filter']['month'] ?? now()->month;
+                                $year = $livewire->tableFilters['month_filter']['year'] ?? now()->year;
+                                
+                                // Calculate total remaining budget
+                                $totalRemaining = \App\Models\Wallet::withSum(['transactions' => function ($q) use ($month, $year) {
+                                    $q->where('type', 'expense')
+                                       ->whereMonth('date', $month)
+                                       ->whereYear('date', $year);
+                                }], 'value')
+                                ->get()
+                                ->sum(function ($wallet) {
+                                    return $wallet->budget - ($wallet->transactions_sum_value ?? 0);
+                                });
+                                
+                                return $totalRemaining;
+                            })
+                    ]),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
                     ->dateTime()

@@ -83,6 +83,18 @@ class Wallet extends Model
     }
 
     /**
+     * Get the total value of expense transactions for a specific month.
+     */
+    public function getExpenseTransactionsValueForMonth(int $year, int $month): float
+    {
+        return $this->transactions()
+            ->where('type', 'expense')
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->sum('value') ?? 0.0;
+    }
+
+    /**
      * Get the total value of paid transactions in this wallet.
      */
     public function getPaidTransactionsValue(): float
@@ -107,6 +119,6 @@ class Wallet extends Model
      */
     public function getRemainingBudgetForMonth(int $year, int $month): float
     {
-        return $this->budget - $this->getOpenTransactionsValueForMonth($year, $month);
+        return $this->budget - $this->getExpenseTransactionsValueForMonth($year, $month);
     }
 }

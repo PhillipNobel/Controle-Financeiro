@@ -26,7 +26,15 @@ class MonthFilter extends BaseFilter
 
     public function apply(Builder $query, array $data = []): Builder
     {
+        // Este filtro não aplica condições ao query principal
+        // porque o orçamento restante é calculado dinamicamente
+        // baseado no mês/ano selecionado
         return $query;
+    }
+    
+    public function getQueryStringBindings(): array
+    {
+        return ['month_filter'];
     }
 
     protected function getMonthOptions(): array
