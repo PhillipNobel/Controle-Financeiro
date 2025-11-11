@@ -69,6 +69,17 @@ class TransactionResource extends Resource
                     ->label('Valor')
                     ->required(),
                     
+                Forms\Components\Select::make('payment_method')
+                    ->label('Método de Pagamento')
+                    ->options([
+                        \App\Enums\PaymentMethod::DEBIT->value => \App\Enums\PaymentMethod::DEBIT->getLabel(),
+                        \App\Enums\PaymentMethod::CREDIT_CARD->value => \App\Enums\PaymentMethod::CREDIT_CARD->getLabel(),
+                        \App\Enums\PaymentMethod::PIX->value => \App\Enums\PaymentMethod::PIX->getLabel(),
+                        \App\Enums\PaymentMethod::BANK_SLIP->value => \App\Enums\PaymentMethod::BANK_SLIP->getLabel(),
+                    ])
+                    ->default(\App\Enums\PaymentMethod::DEBIT->value)
+                    ->nullable(),
+                    
                 Forms\Components\Toggle::make('is_recurring')
                     ->label('Transação Recorrente?')
                     ->live()
@@ -112,11 +123,6 @@ class TransactionResource extends Resource
                     ->date('d/m/Y')
                     ->sortable(),
                     
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Criado em')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable(),
-                    
                 Tables\Columns\TextColumn::make('recurring_end_date')
                     ->label('Final da Recorrência')
                     ->date('d/m/Y')
@@ -135,6 +141,12 @@ class TransactionResource extends Resource
                     ->color(fn (?ExpenseType $state): ?string => $state?->getColor())
                     ->visible(fn (?Transaction $record): bool => $record?->type === TransactionType::EXPENSE),
                     
+                Tables\Columns\TextColumn::make('payment_method')
+                    ->label('Método de Pagamento')
+                    ->badge()
+                    ->formatStateUsing(fn (?\App\Enums\PaymentMethod $state): ?string => $state?->getLabel())
+                    ->color(fn (?\App\Enums\PaymentMethod $state): ?string => $state?->getColor()),
+                    
                 Tables\Columns\TextColumn::make('recurring_type')
                     ->label('Recorrência')
                     ->badge()
@@ -149,7 +161,13 @@ class TransactionResource extends Resource
                         TransactionType::INCOME => 'success',
                         TransactionType::EXPENSE => 'danger',
                     })
-                    ->sortable(),
+                    ->sortable()
+                    ->summarize([
+                        Tables\Columns\Summarizers\Sum::make()
+                            ->label('Total')
+                            ->money('BRL')
+                            ->using(fn ($query) => $query->sum('value')),
+                    ]),
                     
                 Tables\Columns\TextColumn::make('wallet.name')
                     ->label('Carteira')
@@ -189,6 +207,15 @@ class TransactionResource extends Resource
                     ->options([
                         '1' => 'Sim',
                         '0' => 'Não',
+                    ]),
+                    
+                SelectFilter::make('payment_method')
+                    ->label('Método de Pagamento')
+                    ->options([
+                        \App\Enums\PaymentMethod::DEBIT->value => \App\Enums\PaymentMethod::DEBIT->getLabel(),
+                        \App\Enums\PaymentMethod::CREDIT_CARD->value => \App\Enums\PaymentMethod::CREDIT_CARD->getLabel(),
+                        \App\Enums\PaymentMethod::PIX->value => \App\Enums\PaymentMethod::PIX->getLabel(),
+                        \App\Enums\PaymentMethod::BANK_SLIP->value => \App\Enums\PaymentMethod::BANK_SLIP->getLabel(),
                     ]),
                     
                 Filter::make('date_range')
