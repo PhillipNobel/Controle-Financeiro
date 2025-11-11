@@ -127,12 +127,12 @@ class TransactionResource extends Resource
                     
                 Tables\Columns\TextColumn::make('date')
                     ->label('Data da Transação')
-                    ->date('d/m/Y')
+                    ->date('j M, Y')
                     ->sortable(),
                     
                 Tables\Columns\TextColumn::make('recurring_end_date')
                     ->label('Final da Recorrência')
-                    ->date('d/m/Y')
+                    ->date('j M, Y')
                     ->visible(fn (?Transaction $record): bool => $record?->is_recurring === true),
                     
                 Tables\Columns\TextColumn::make('type')

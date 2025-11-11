@@ -17,7 +17,6 @@ class Dashboard extends BaseDashboard
     {
         return [
             FinancialSummaryWidget::class,
-            ExpenseVsRevenueWidget::class,
             MostExpensiveWidget::class,
         ];
     }

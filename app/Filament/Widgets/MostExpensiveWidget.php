@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Illuminate\Support\Carbon;
 
 class MostExpensiveWidget extends BaseWidget
 {
@@ -22,6 +23,10 @@ class MostExpensiveWidget extends BaseWidget
             ->query(
                 Transaction::query()
                     ->where('type', 'expense')
+                    ->whereBetween('date', [
+                        Carbon::now()->startOfMonth(),
+                        Carbon::now()->endOfMonth()
+                    ])
                     ->orderBy('value', 'desc')
                     ->limit(10)
             )
