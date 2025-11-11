@@ -101,4 +101,12 @@ class Wallet extends Model
             get: fn () => $this->budget - $this->getOpenTransactionsValueForCurrentMonth(),
         );
     }
+
+    /**
+     * Get the remaining budget for a specific month.
+     */
+    public function getRemainingBudgetForMonth(int $year, int $month): float
+    {
+        return $this->budget - $this->getOpenTransactionsValueForMonth($year, $month);
+    }
 }

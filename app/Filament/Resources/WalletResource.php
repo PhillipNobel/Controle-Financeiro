@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Notifications\Notification;
 use Leandrocfe\FilamentPtbrFormFields\Money;
+use App\Filament\Resources\WalletResource\Filters\MonthFilter;
 
 class WalletResource extends Resource
 {
@@ -60,13 +61,19 @@ class WalletResource extends Resource
                     ->money('BRL')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('remaining_budget')
-                    ->label('Orçamento Restante do Mês')
+                    ->label('Orçamento Restante')
                     ->money('BRL')
                     ->sortable()
                     ->color(fn (string $state): string => match (true) {
                         $state < 0 => 'danger',
                         $state > 0 => 'success',
                         default => 'gray',
+                    })
+                    ->getStateUsing(function (Wallet $record) {
+                        $month = request()->input('tableFilters.month_filter.month', now()->month);
+                        $year = request()->input('tableFilters.month_filter.year', now()->year);
+                        
+                        return $record->getRemainingBudgetForMonth((int) $year, (int) $month);
                     }),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
@@ -80,7 +87,8 @@ class WalletResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                MonthFilter::make('month_filter')
+                    ->label('Filtrar por Mês'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
