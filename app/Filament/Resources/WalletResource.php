@@ -53,7 +53,8 @@ class WalletResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nome')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('description')
                     ->label('Descrição')
                     ->searchable(),
@@ -68,7 +69,6 @@ class WalletResource extends Resource
                 Tables\Columns\TextColumn::make('remaining_budget')
                     ->label('Orçamento Restante')
                     ->money('BRL')
-                    ->sortable()
                     ->color(fn (string $state): string => match (true) {
                         $state < 0 => 'danger',
                         $state > 0 => 'success',
