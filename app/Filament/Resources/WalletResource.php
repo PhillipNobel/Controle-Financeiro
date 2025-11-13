@@ -128,7 +128,8 @@ class WalletResource extends Resource
                 view('filament.tables.footer-total', [
                     'total' => \App\Models\Wallet::sum('budget'),
                 ])
-            );
+            )
+            ->defaultPaginationPageOption(25);
     }
 
     public static function getRelations(): array

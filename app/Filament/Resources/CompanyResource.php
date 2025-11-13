@@ -164,7 +164,8 @@ class CompanyResource extends Resource
             ])
             ->emptyStateHeading('Nenhuma empresa cadastrada')
             ->emptyStateDescription('Configure os dados da sua empresa para começar.')
-            ->emptyStateIcon('heroicon-o-building-office');
+            ->emptyStateIcon('heroicon-o-building-office')
+            ->defaultPaginationPageOption(25);
     }
 
     public static function getRelations(): array

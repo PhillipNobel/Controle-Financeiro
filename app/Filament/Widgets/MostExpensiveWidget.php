@@ -20,17 +20,17 @@ class MostExpensiveWidget extends BaseWidget
     
     public function table(Table $table): Table
     {
+        $query = Transaction::query()
+            ->where('type', 'expense')
+            ->whereBetween('date', [
+                Carbon::now()->startOfMonth(),
+                Carbon::now()->endOfMonth()
+            ])
+            ->orderBy('value', 'desc')
+            ->limit(10);
+        
         return $table
-            ->query(
-                Transaction::query()
-                    ->where('type', 'expense')
-                    ->whereBetween('date', [
-                        Carbon::now()->startOfMonth(),
-                        Carbon::now()->endOfMonth()
-                    ])
-                    ->orderBy('value', 'desc')
-                    ->limit(10)
-            )
+            ->query($query)
             ->columns([
                 Tables\Columns\TextColumn::make('item')
                     ->label('Item')

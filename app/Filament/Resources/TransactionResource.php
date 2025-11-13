@@ -291,7 +291,8 @@ class TransactionResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('date', 'desc');
+            ->defaultSort('date', 'desc')
+            ->defaultPaginationPageOption(25);
     }
 
     public static function getRelations(): array

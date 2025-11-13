@@ -16,76 +16,77 @@ class FinancialSummaryWidget extends BaseWidget
     
     protected function getStats(): array
     {
-        $currentMonth = Carbon::now();
-        $previousMonth = Carbon::now()->subMonth();
-        
-        // Current month data
-        $currentTransactions = Transaction::whereBetween('date', [
-            $currentMonth->startOfMonth()->copy(),
-            $currentMonth->endOfMonth()->copy()
-        ])->get();
-        
-        // Previous month data for comparison
-        $previousTransactions = Transaction::whereBetween('date', [
-            $previousMonth->startOfMonth()->copy(),
-            $previousMonth->endOfMonth()->copy()
-        ])->get();
-        
-        $currentRevenues = $currentTransactions->where('type', 'income')->sum('value');
-        $currentExpenses = $currentTransactions->where('type', 'expense')->sum('value');
-        $currentBalance = $currentRevenues - $currentExpenses;
-        
-        $previousRevenues = $previousTransactions->where('type', 'income')->sum('value');
-        $previousExpenses = $previousTransactions->where('type', 'expense')->sum('value');
-        $previousBalance = $previousRevenues - $previousExpenses;
-        
-        // Calculate percentage changes
-        $revenueChange = $this->calculatePercentageChange($previousRevenues, $currentRevenues);
-        $expenseChange = $this->calculatePercentageChange($previousExpenses, $currentExpenses);
-        $balanceChange = $this->calculatePercentageChange($previousBalance, $currentBalance);
-        
-        $totalWallets = Wallet::count();
-        $totalTransactions = Transaction::count();
-        
-        $stats = [];
-        
-        if ($totalTransactions > 0) {
-            $stats = [
-                Stat::make('Receitas do Mês', 'R$ ' . number_format($currentRevenues, 2, ',', '.'))
-                    ->description($this->getChangeDescription($revenueChange, 'receitas'))
-                    ->descriptionIcon($revenueChange >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down')
-                    ->color($revenueChange >= 0 ? 'success' : 'danger'),
-                    
-                Stat::make('Despesas do Mês', 'R$ ' . number_format($currentExpenses, 2, ',', '.'))
-                    ->description($this->getChangeDescription($expenseChange, 'despesas'))
-                    ->descriptionIcon($expenseChange <= 0 ? 'heroicon-m-arrow-trending-down' : 'heroicon-m-arrow-trending-up')
-                    ->color($expenseChange <= 0 ? 'success' : 'warning'),
-                    
-                Stat::make('Saldo do Mês', 'R$ ' . number_format($currentBalance, 2, ',', '.'))
-                    ->description($this->getChangeDescription($balanceChange, 'saldo'))
-                    ->descriptionIcon($balanceChange >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down')
-                    ->color($currentBalance >= 0 ? 'success' : 'danger'),
-                    
-                Stat::make('Total de Carteiras', $totalWallets)
-                    ->description('Carteiras cadastradas')
-                    ->descriptionIcon('heroicon-m-wallet')
-                    ->color('info'),
-            ];
-        } else {
-            $stats = [
-                Stat::make('Bem-vindo!', 'Nenhuma transação')
-                    ->description('Comece cadastrando suas primeiras transações')
-                    ->descriptionIcon('heroicon-m-plus-circle')
-                    ->color('gray'),
-                    
-                Stat::make('Carteiras', $totalWallets)
-                    ->description($totalWallets > 0 ? 'Carteiras cadastradas' : 'Crie sua primeira carteira')
-                    ->descriptionIcon('heroicon-m-wallet')
-                    ->color($totalWallets > 0 ? 'info' : 'gray'),
-            ];
-        }
-        
-        return $stats;
+            $currentMonth = Carbon::now();
+            $previousMonth = Carbon::now()->subMonth();
+            
+            // Current month data
+            $currentTransactions = Transaction::whereBetween('date', [
+                $currentMonth->startOfMonth()->copy(),
+                $currentMonth->endOfMonth()->copy()
+            ])->get();
+            
+            // Previous month data for comparison
+            $previousTransactions = Transaction::whereBetween('date', [
+                $previousMonth->startOfMonth()->copy(),
+                $previousMonth->endOfMonth()->copy()
+            ])->get();
+            
+            $currentRevenues = $currentTransactions->where('type', 'income')->sum('value');
+            $currentExpenses = $currentTransactions->where('type', 'expense')->sum('value');
+            $currentBalance = $currentRevenues - $currentExpenses;
+            
+            $previousRevenues = $previousTransactions->where('type', 'income')->sum('value');
+            $previousExpenses = $previousTransactions->where('type', 'expense')->sum('value');
+            $previousBalance = $previousRevenues - $previousExpenses;
+            
+            // Calculate total transactions and wallets
+            $totalTransactions = $currentTransactions->count();
+            $totalWallets = Wallet::count();
+            
+            // Calculate percentage changes
+            $revenueChange = $this->calculatePercentageChange($previousRevenues, $currentRevenues);
+            $expenseChange = $this->calculatePercentageChange($previousExpenses, $currentExpenses);
+            $balanceChange = $this->calculatePercentageChange($previousBalance, $currentBalance);
+            
+            $stats = [];
+            
+            if ($totalTransactions > 0) {
+                $stats = [
+                    Stat::make('Receitas do Mês', 'R$ ' . number_format($currentRevenues, 2, ',', '.'))
+                        ->description($this->getChangeDescription($revenueChange, 'receitas'))
+                        ->descriptionIcon($revenueChange >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down')
+                        ->color($revenueChange >= 0 ? 'success' : 'danger'),
+                        
+                    Stat::make('Despesas do Mês', 'R$ ' . number_format($currentExpenses, 2, ',', '.'))
+                        ->description($this->getChangeDescription($expenseChange, 'despesas'))
+                        ->descriptionIcon($expenseChange <= 0 ? 'heroicon-m-arrow-trending-down' : 'heroicon-m-arrow-trending-up')
+                        ->color($expenseChange <= 0 ? 'success' : 'warning'),
+                        
+                    Stat::make('Saldo do Mês', 'R$ ' . number_format($currentBalance, 2, ',', '.'))
+                        ->description($this->getChangeDescription($balanceChange, 'saldo'))
+                        ->descriptionIcon($balanceChange >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down')
+                        ->color($currentBalance >= 0 ? 'success' : 'danger'),
+                        
+                    Stat::make('Total de Carteiras', $totalWallets)
+                        ->description('Carteiras cadastradas')
+                        ->descriptionIcon('heroicon-m-wallet')
+                        ->color('info'),
+                ];
+            } else {
+                $stats = [
+                    Stat::make('Bem-vindo!', 'Nenhuma transação')
+                        ->description('Comece cadastrando suas primeiras transações')
+                        ->descriptionIcon('heroicon-m-plus-circle')
+                        ->color('gray'),
+                        
+                    Stat::make('Carteiras', $totalWallets)
+                        ->description($totalWallets > 0 ? 'Carteiras cadastradas' : 'Crie sua primeira carteira')
+                        ->descriptionIcon('heroicon-m-wallet')
+                        ->color($totalWallets > 0 ? 'info' : 'gray'),
+                ];
+            }
+            
+            return $stats;
     }
     
     private function calculatePercentageChange(float $previous, float $current): float
