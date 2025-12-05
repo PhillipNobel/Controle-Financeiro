@@ -15,6 +15,7 @@ use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Filters\SelectFilter;
@@ -289,6 +290,21 @@ class TransactionResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\BulkAction::make('change_status')
+                        ->label('Alterar Status')
+                        ->icon('heroicon-o-pencil-square')
+                        ->form([
+                            Forms\Components\Select::make('status')
+                                ->label('Novo Status')
+                                ->options(StatusTransaction::options())
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data): void {
+                            foreach ($records as $record) {
+                                $record->update(['status' => $data['status']]);
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ])
             ->defaultSort('date', 'desc')

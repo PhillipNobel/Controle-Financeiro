@@ -124,11 +124,17 @@ class WalletResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
-            ->contentFooter(
-                view('filament.tables.footer-total', [
-                    'total' => \App\Models\Wallet::sum('budget'),
-                ])
-            )
+            ->contentFooter(function ($livewire) {
+                $data = $livewire->tableFilters['month_filter'] ?? [];
+                $month = $data['month'] ?? now()->month;
+                $year = $data['year'] ?? now()->year;
+                
+                $date = \Carbon\Carbon::createFromDate($year, $month, 1);
+                
+                return view('filament.tables.footer-total', [
+                    'currentMonth' => ucfirst($date->locale('pt_BR')->translatedFormat('F Y')),
+                ]);
+            })
             ->defaultPaginationPageOption(25);
     }
 
