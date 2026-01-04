@@ -53,8 +53,11 @@ class RecurringTransactionService
             'item' => $masterTransaction->item,
             'date' => $newDate,
             'value' => $masterTransaction->value,
+            'quantity' => $masterTransaction->quantity,
             'type' => $masterTransaction->type,
             'expense_type' => $masterTransaction->expense_type,
+            'payment_method' => $masterTransaction->payment_method,
+            'status' => $masterTransaction->status,
             'is_recurring' => false, // Cópias não são recorrentes
             'recurring_type' => null,
             'recurring_end_date' => null,
