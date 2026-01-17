@@ -12,7 +12,7 @@ class TransactionObserver
      */
     public function created(Transaction $transaction): void
     {
-        if ($transaction->is_recurring && $transaction->recurring_type && $transaction->recurring_end_date) {
+        if ($transaction->is_recurring && $transaction->recurring_type && $transaction->installments) {
             $service = new RecurringTransactionService();
             $service->createRecurringTransactions($transaction);
         }

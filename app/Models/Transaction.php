@@ -45,7 +45,6 @@ class Transaction extends Model
     protected $fillable = [
         'item',
         'date',
-        'quantity',
         'value',
         'type',
         'expense_type',
@@ -53,6 +52,7 @@ class Transaction extends Model
         'status',
         'is_recurring',
         'recurring_type',
+        'installments',
         'recurring_end_date',
         'wallet_id',
     ];
@@ -66,7 +66,6 @@ class Transaction extends Model
     {
         return [
             'date' => 'date',
-            'quantity' => 'decimal:2',
             'value' => 'decimal:2',
             'type' => TransactionType::class,
             'expense_type' => ExpenseType::class,

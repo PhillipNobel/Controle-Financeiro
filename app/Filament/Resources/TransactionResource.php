@@ -103,8 +103,12 @@ class TransactionResource extends Resource
                     ->visible(fn (Forms\Get $get) => $get('is_recurring') === true)
                     ->required(fn (Forms\Get $get) => $get('is_recurring') === true),
                     
-                Forms\Components\DatePicker::make('recurring_end_date')
-                    ->label('Data Final da Recorrência')
+                Forms\Components\TextInput::make('installments')
+                    ->label('Parcelas')
+                    ->numeric()
+                    ->minValue(1)
+                    ->default(1)
+                    ->helperText('A transação atual conta como a 1ª parcela.')
                     ->visible(fn (Forms\Get $get) => $get('is_recurring') === true)
                     ->required(fn (Forms\Get $get) => $get('is_recurring') === true),
                     

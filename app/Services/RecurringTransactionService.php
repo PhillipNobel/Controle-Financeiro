@@ -13,23 +13,26 @@ class RecurringTransactionService
      */
     public function createRecurringTransactions(Transaction $masterTransaction): void
     {
-        if (!$masterTransaction->is_recurring || !$masterTransaction->recurring_type || !$masterTransaction->recurring_end_date) {
+        if (!$masterTransaction->is_recurring || !$masterTransaction->recurring_type || !$masterTransaction->installments) {
             return;
         }
 
         $startDate = Carbon::parse($masterTransaction->date);
-        $endDate = Carbon::parse($masterTransaction->recurring_end_date);
+        $totalInstallments = $masterTransaction->installments;
         
+        // A primeira parcela já é a transação mestre (criada no banco)
+        // Começamos a partir da segunda parcela (i = 1)
         $currentDate = $startDate->copy();
         
-        // Criar todas as cópias desde o início
-        while ($currentDate->lte($endDate)) {
-            // Não criar cópia para a data original (já existe)
-            if (!$currentDate->eq($startDate)) {
-                $this->createTransactionCopy($masterTransaction, $currentDate->copy());
-            }
+        for ($i = 1; $i < $totalInstallments; $i++) {
             $currentDate = $this->getNextDate($currentDate, $masterTransaction->recurring_type);
+            $this->createTransactionCopy($masterTransaction, $currentDate->copy(), $i + 1);
         }
+
+        // Atualiza a data final da recorrência na transação mestre para fins de histórico/filtro
+        $masterTransaction->updateQuietly([
+            'recurring_end_date' => $currentDate
+        ]);
     }
 
     /**
@@ -47,19 +50,19 @@ class RecurringTransactionService
     /**
      * Cria uma cópia da transação com nova data
      */
-    private function createTransactionCopy(Transaction $masterTransaction, Carbon $newDate): void
+    private function createTransactionCopy(Transaction $masterTransaction, Carbon $newDate, int $installmentNumber): void
     {
         Transaction::create([
-            'item' => $masterTransaction->item,
+            'item' => $masterTransaction->item . " ({$installmentNumber}/{$masterTransaction->installments})",
             'date' => $newDate,
             'value' => $masterTransaction->value,
-            'quantity' => $masterTransaction->quantity,
             'type' => $masterTransaction->type,
             'expense_type' => $masterTransaction->expense_type,
             'payment_method' => $masterTransaction->payment_method,
             'status' => $masterTransaction->status,
             'is_recurring' => false, // Cópias não são recorrentes
             'recurring_type' => null,
+            'installments' => null,
             'recurring_end_date' => null,
             'wallet_id' => $masterTransaction->wallet_id,
         ]);
@@ -67,46 +70,10 @@ class RecurringTransactionService
 
     /**
      * Processa transações recorrentes que precisam ser criadas
+     * (Mantido por compatibilidade, mas a lógica agora foca em parcelas fixas no ato da criação)
      */
     public function processPendingRecurringTransactions(): void
     {
-        $transactions = Transaction::where('is_recurring', true)
-            ->where('recurring_end_date', '>=', now())
-            ->get();
-
-        foreach ($transactions as $transaction) {
-            $this->createMissingRecurringTransactions($transaction);
-        }
-    }
-
-    /**
-     * Cria transações recorrentes que estão faltando
-     */
-    private function createMissingRecurringTransactions(Transaction $masterTransaction): void
-    {
-        $lastTransactionDate = Transaction::where('item', $masterTransaction->item)
-            ->where('wallet_id', $masterTransaction->wallet_id)
-            ->where('is_recurring', false) // Apenas cópias
-            ->orderBy('date', 'desc')
-            ->value('date');
-
-        if (!$lastTransactionDate) {
-            $this->createRecurringTransactions($masterTransaction);
-            return;
-        }
-
-        $lastDate = Carbon::parse($lastTransactionDate);
-        $endDate = Carbon::parse($masterTransaction->recurring_end_date);
-        
-        if ($lastDate->gte($endDate)) {
-            return;
-        }
-
-        $currentDate = $this->getNextDate($lastDate, $masterTransaction->recurring_type);
-        
-        while ($currentDate->lte($endDate)) {
-            $this->createTransactionCopy($masterTransaction, $currentDate->copy());
-            $currentDate = $this->getNextDate($currentDate, $masterTransaction->recurring_type);
-        }
+        // Se houver necessidade de processamento em lote no futuro, a lógica de parcelas deve ser adaptada
     }
 }
